@@ -33,6 +33,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
   const accessToken = useRef<string | null>(null)
+  const sessionEpoch = useRef(0)
 
   const clearSession = useCallback(() => {
     accessToken.current = null
@@ -40,6 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const refreshSession = useCallback(async () => {
+    const epoch = sessionEpoch.current
     try {
       const response = await fetch(`${apiBaseUrl}/api/v1/auth/refresh`, {
         method: 'POST',
@@ -47,12 +49,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       if (!response.ok) throw new Error('Refresh failed')
       const body = (await response.json()) as { access_token: string }
+      if (epoch !== sessionEpoch.current) return false
       const profile = await readUser(body.access_token)
+      if (epoch !== sessionEpoch.current) return false
       accessToken.current = body.access_token
       setUser(profile)
       return true
     } catch {
-      clearSession()
+      if (epoch === sessionEpoch.current) clearSession()
       return false
     }
   }, [clearSession])
@@ -68,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refreshSession])
 
   const login = useCallback(async (email: string, password: string) => {
+    const epoch = ++sessionEpoch.current
     const response = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
       method: 'POST',
       credentials: 'include',
@@ -78,15 +83,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const body = (await response.json()) as { access_token: string }
     try {
       const profile = await readUser(body.access_token)
+      if (epoch !== sessionEpoch.current) return
       accessToken.current = body.access_token
       setUser(profile)
     } catch {
-      clearSession()
+      if (epoch === sessionEpoch.current) clearSession()
       throw new Error('Your session could not be started. Please try again.')
     }
   }, [clearSession])
 
   const logout = useCallback(async () => {
+    sessionEpoch.current += 1
     try {
       await fetch(`${apiBaseUrl}/api/v1/auth/logout`, { method: 'POST', credentials: 'include' })
     } finally {
