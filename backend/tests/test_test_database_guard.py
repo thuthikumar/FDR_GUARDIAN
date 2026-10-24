@@ -1,4 +1,5 @@
 from sqlalchemy.engine import make_url
+import pytest
 
 from app.core import config
 
@@ -26,3 +27,17 @@ def test_test_database_url_rejects_dev_database_before_fixture_setup(monkeypatch
         assert "must differ" in str(exc)
     else:
         raise AssertionError("development database was accepted for tests")
+
+
+def test_database_fixture_refuses_non_test_name_before_setup_or_cleanup(monkeypatch) -> None:
+    import conftest
+
+    unsafe_url = make_url("postgresql+psycopg://user:pass@localhost/development_db")
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://user:pass@localhost/development_db")
+    monkeypatch.setattr(conftest, "test_database_url", lambda: unsafe_url)
+    monkeypatch.setattr(conftest, "_ensure_test_database", lambda *_: pytest.fail("database setup ran before validation"))
+    monkeypatch.setattr(conftest.command, "upgrade", lambda *_: pytest.fail("migration ran before validation"))
+    fixture_generator = conftest.migrated_test_database.__wrapped__()
+
+    with pytest.raises(RuntimeError, match="must end with _test"):
+        next(fixture_generator)

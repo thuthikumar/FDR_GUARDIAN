@@ -10,11 +10,15 @@ from alembic.config import Config
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
+from fastapi.testclient import TestClient
 
 from app.core.config import test_database_url, validate_test_database_url
 
-# A test-only signing key keeps imports deterministic; production has no default.
-os.environ.setdefault("JWT_SECRET_KEY", "test-only-signing-key-not-for-use-outside-tests")
+# Isolate app settings from developer and production environment values.
+os.environ["APP_ENV"] = "test"
+os.environ["JWT_SECRET_KEY"] = "test-only-signing-key-not-for-use-outside-tests"
+os.environ["COOKIE_SECURE"] = "false"
+os.environ["FRONTEND_ORIGIN"] = "http://127.0.0.1:5173"
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -102,3 +106,19 @@ def db_session(db_engine) -> Generator[Session, None, None]:
         if transaction.is_active:
             transaction.rollback()
         connection.close()
+
+
+@pytest.fixture
+def api_client(db_session: Session) -> Generator[TestClient, None, None]:
+    from app.db.session import get_session
+    from app.main import app
+
+    def override_session():
+        yield db_session
+
+    app.dependency_overrides[get_session] = override_session
+    try:
+        with TestClient(app) as client:
+            yield client
+    finally:
+        app.dependency_overrides.pop(get_session, None)
