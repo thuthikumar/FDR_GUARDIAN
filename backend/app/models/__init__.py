@@ -1,5 +1,6 @@
 """Import all model modules so shared metadata is complete for Alembic."""
 
+from app.models.auth import RefreshToken
 from app.models.documents import Document, ExtractedField
 from app.models.fdr import FDRRecord
 from app.models.institutions import Institution
@@ -19,6 +20,7 @@ __all__ = [
     "IntegrationSyncRun",
     "Notification",
     "ReleaseEvent",
+    "RefreshToken",
     "User",
     "VerificationCase",
 ]

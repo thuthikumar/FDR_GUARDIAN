@@ -120,6 +120,28 @@ def test_invalid_role_and_workflow_status_are_rejected(db_session: Session) -> N
             db_session.flush()
 
 
+def test_institution_admin_requires_institution(db_session: Session) -> None:
+    user = User(
+        email=f"institution-admin-{uuid4().hex}@synthetic.invalid",
+        full_name="Synthetic Institution Administrator",
+        role=UserRole.INSTITUTION_ADMIN.value,
+        institution_id=None,
+        is_synthetic=True,
+    )
+    with pytest.raises(IntegrityError):
+        with db_session.begin_nested():
+            db_session.add(user)
+            db_session.flush()
+
+
+def test_refresh_token_schema_stores_hash_and_restricts_user_deletion(db_engine) -> None:
+    inspector = inspect(db_engine)
+    columns = {column["name"] for column in inspector.get_columns("refresh_tokens")}
+    assert {"id", "user_id", "token_hash", "family_id", "expires_at", "revoked_at", "replaced_by", "created_at"} <= columns
+    user_fk = next(fk for fk in inspector.get_foreign_keys("refresh_tokens") if fk["referred_table"] == "users")
+    assert user_fk["options"]["ondelete"] == "RESTRICT"
+
+
 def test_fdr_number_is_not_unique_but_internal_id_is(db_session: Session) -> None:
     institution = add_institution(db_session)
     add_fdr(db_session, institution, internal_id="TST-FDR-UNIQUE-0001", fdr_number="SYNTH-SHARED-NUMBER")
