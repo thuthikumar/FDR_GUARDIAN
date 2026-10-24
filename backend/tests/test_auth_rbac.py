@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
 from app.core.permissions import Permission, permissions_for_role
+from app.core.config import refresh_token_reuse_grace_seconds
 from app.core.security import create_access_token, hash_password, hash_refresh_token, verify_password
 from app.db.session import get_session
 from app.main import app
@@ -159,7 +160,7 @@ def test_lockout_after_five_failures_and_success_resets_counter(api_client, db_s
     assert user.failed_login_attempts == 0 and user.locked_until is None and user.last_login_at is not None
 
 
-def test_refresh_rotation_then_reuse_revokes_family(api_client, db_session: Session) -> None:
+def test_refresh_rotation_grace_then_reuse_revokes_family(api_client, db_session: Session) -> None:
     user = add_user(db_session)
     login = api_client.post("/api/v1/auth/login", json={"email": user.email, "password": TEST_PASSWORD})
     assert login.status_code == 200
@@ -175,6 +176,14 @@ def test_refresh_rotation_then_reuse_revokes_family(api_client, db_session: Sess
     assert first_row is not None and first_row.revoked_at is not None and first_row.replaced_by is not None
 
     api_client.cookies.set("fdr_refresh", first_raw, path="/api/v1/auth")
+    concurrent = api_client.post("/api/v1/auth/refresh")
+    assert concurrent.status_code == 200
+    assert "set-cookie" not in concurrent.headers
+
+    first_row.revoked_at = datetime.now(timezone.utc) - timedelta(
+        seconds=refresh_token_reuse_grace_seconds() + 1
+    )
+    db_session.flush()
     reused = api_client.post("/api/v1/auth/refresh")
     assert reused.status_code == 401
     family = db_session.scalars(select(RefreshToken).where(RefreshToken.family_id == first_row.family_id)).all()
@@ -211,6 +220,8 @@ def test_logout_revokes_refresh_and_clears_cookie(api_client, db_session: Sessio
     db_session.refresh(row)
     assert row.revoked_at is not None
     assert db_session.scalar(select(AuditEvent).where(AuditEvent.action == "logout")) is not None
+    api_client.cookies.set("fdr_refresh", raw, path="/api/v1/auth")
+    assert api_client.post("/api/v1/auth/refresh").status_code == 401
 
 
 @pytest.mark.parametrize("authorization", [None, "Bearer malformed", "Bearer expired"])

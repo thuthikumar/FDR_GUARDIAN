@@ -22,7 +22,7 @@ All demo accounts and records are synthetic. The application has no access to AI
 1. `POST /api/v1/auth/login` accepts an email and password. Passwords are verified with Argon2id. The response body contains a short-lived access JWT.
 2. The response also sets a cryptographically random refresh token in an HttpOnly, `SameSite=Strict` cookie with path `/api/v1/auth`. `COOKIE_SECURE=false` is the local development setting; production refuses to start unless `COOKIE_SECURE=true`.
 3. The database stores only the SHA-256 hash of each random refresh token, its family ID, expiry, revocation time, and replacement row ID. The raw refresh token is never stored. Refresh tokens expire after seven days by default and rotate on each successful `POST /api/v1/auth/refresh`.
-4. If a revoked refresh token is presented again, the server revokes all still-active tokens in that token family and writes a `token_reuse_detected` audit event.
+4. A just-rotated token may be presented concurrently for a configurable 10-second grace period (`REFRESH_TOKEN_REUSE_GRACE_SECONDS`); this succeeds only while its replacement remains active. Reuse after that window revokes all still-active tokens in the family and writes a `token_reuse_detected` audit event.
 5. `POST /api/v1/auth/logout` revokes the presented refresh token and clears the cookie. `GET /api/v1/auth/me` returns only user identity, role, institution ID, and permissions.
 
 The frontend keeps the access JWT in memory only. On page load it attempts `/auth/refresh`, then loads `/auth/me`. An API 401 triggers one refresh attempt; if that fails the in-memory session is cleared and the protected route redirects to login. No access token is written to local or session storage.
@@ -34,6 +34,7 @@ APP_ENV=development
 JWT_SECRET_KEY=<random value with at least 32 characters>
 ACCESS_TOKEN_EXPIRE_MINUTES=15
 REFRESH_TOKEN_EXPIRE_DAYS=7
+REFRESH_TOKEN_REUSE_GRACE_SECONDS=10
 COOKIE_SECURE=false
 FRONTEND_ORIGIN=http://127.0.0.1:5173
 SEED_DEV_PASSWORD=<local synthetic-user password>

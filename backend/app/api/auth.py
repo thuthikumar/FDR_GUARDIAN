@@ -12,7 +12,7 @@ from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.api.dependencies import get_current_user
-from app.core.config import cookie_secure, refresh_token_expire_days
+from app.core.config import cookie_secure, refresh_token_expire_days, refresh_token_reuse_grace_seconds
 from app.core.permissions import permissions_for_role
 from app.core.security import create_access_token, create_refresh_token, hash_refresh_token, verify_password
 from app.db.session import get_session
@@ -157,7 +157,27 @@ def refresh(
     )
     if stored is None:
         return _unauthorized_refresh()
+    user = session.get(User, stored.user_id)
+    if stored.expires_at <= now or user is None or not user.is_active:
+        session.execute(
+            update(RefreshToken)
+            .where(RefreshToken.family_id == stored.family_id, RefreshToken.revoked_at.is_(None))
+            .values(revoked_at=now)
+        )
+        session.commit()
+        return _unauthorized_refresh()
+
     if stored.revoked_at is not None:
+        grace_seconds = refresh_token_reuse_grace_seconds()
+        within_grace = (
+            stored.replaced_by is not None
+            and stored.revoked_at >= now - timedelta(seconds=grace_seconds)
+        )
+        replacement = session.get(RefreshToken, stored.replaced_by) if within_grace else None
+        if replacement is not None and replacement.revoked_at is None and replacement.expires_at > now:
+            # The replacement's raw value is intentionally not persisted. Returning no
+            # Set-Cookie preserves whichever concurrent rotation response set the cookie.
+            return AccessTokenResponse(access_token=create_access_token(user.id))
         session.execute(
             update(RefreshToken)
             .where(RefreshToken.family_id == stored.family_id, RefreshToken.revoked_at.is_(None))
@@ -171,16 +191,6 @@ def refresh(
             entity_id=stored.family_id,
             actor_id=stored.user_id,
             change_summary={"result": "family_revoked"},
-        )
-        session.commit()
-        return _unauthorized_refresh()
-
-    user = session.get(User, stored.user_id)
-    if stored.expires_at <= now or user is None or not user.is_active:
-        session.execute(
-            update(RefreshToken)
-            .where(RefreshToken.family_id == stored.family_id, RefreshToken.revoked_at.is_(None))
-            .values(revoked_at=now)
         )
         session.commit()
         return _unauthorized_refresh()

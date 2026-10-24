@@ -29,6 +29,26 @@ async function readUser(token: string): Promise<AuthUser> {
   return response.json() as Promise<AuthUser>
 }
 
+type RestoredSession = { accessToken: string; user: AuthUser }
+
+let refreshInFlight: Promise<RestoredSession> | null = null
+
+function restoreSession(): Promise<RestoredSession> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      const response = await fetch(`${apiBaseUrl}/api/v1/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      })
+      if (!response.ok) throw new Error('Refresh failed')
+      const body = (await response.json()) as { access_token: string }
+      const profile = await readUser(body.access_token)
+      return { accessToken: body.access_token, user: profile }
+    })()
+  }
+  return refreshInFlight
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [loading, setLoading] = useState(true)
@@ -42,22 +62,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshSession = useCallback(async () => {
     const epoch = sessionEpoch.current
+    const request = restoreSession()
     try {
-      const response = await fetch(`${apiBaseUrl}/api/v1/auth/refresh`, {
-        method: 'POST',
-        credentials: 'include',
-      })
-      if (!response.ok) throw new Error('Refresh failed')
-      const body = (await response.json()) as { access_token: string }
+      const restored = await request
       if (epoch !== sessionEpoch.current) return false
-      const profile = await readUser(body.access_token)
-      if (epoch !== sessionEpoch.current) return false
-      accessToken.current = body.access_token
-      setUser(profile)
+      accessToken.current = restored.accessToken
+      setUser(restored.user)
       return true
     } catch {
       if (epoch === sessionEpoch.current) clearSession()
       return false
+    } finally {
+      if (refreshInFlight === request) refreshInFlight = null
     }
   }, [clearSession])
 

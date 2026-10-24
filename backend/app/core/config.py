@@ -59,6 +59,18 @@ def refresh_token_expire_days() -> int:
     return _positive_int("REFRESH_TOKEN_EXPIRE_DAYS", 7)
 
 
+def refresh_token_reuse_grace_seconds() -> int:
+    """Allow benign concurrent use of a just-rotated refresh token briefly."""
+    raw = os.getenv("REFRESH_TOKEN_REUSE_GRACE_SECONDS", "10").strip()
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise RuntimeError("REFRESH_TOKEN_REUSE_GRACE_SECONDS must be a non-negative integer") from exc
+    if value < 0:
+        raise RuntimeError("REFRESH_TOKEN_REUSE_GRACE_SECONDS must be a non-negative integer")
+    return value
+
+
 def _positive_int(name: str, default: int) -> int:
     try:
         value = int(os.getenv(name, str(default)))
