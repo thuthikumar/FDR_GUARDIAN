@@ -2,6 +2,7 @@
 
 from collections.abc import Generator
 from pathlib import Path
+import os
 
 import pytest
 from alembic import command
@@ -12,10 +13,14 @@ from sqlalchemy.orm import Session
 
 from app.core.config import test_database_url, validate_test_database_url
 
+# A test-only signing key keeps imports deterministic; production has no default.
+os.environ.setdefault("JWT_SECRET_KEY", "test-only-signing-key-not-for-use-outside-tests")
+
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 EXPECTED_TABLES = {
     "users",
+    "refresh_tokens",
     "institutions",
     "fdr_records",
     "documents",
