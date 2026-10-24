@@ -21,11 +21,7 @@ def test_database_url() -> URL:
     """Return an explicitly configured or safely derived, separate test DB URL."""
     configured = os.getenv("TEST_DATABASE_URL", "").strip()
     if configured:
-        test_url = make_url(configured)
-        development_url = database_url()
-        if development_url and test_url.database == make_url(development_url).database:
-            raise RuntimeError("TEST_DATABASE_URL must point to a database separate from DATABASE_URL")
-        return test_url
+        return validate_test_database_url(make_url(configured))
 
     development_url = database_url()
     if not development_url:
@@ -33,4 +29,14 @@ def test_database_url() -> URL:
     dev_url = make_url(development_url)
     if not dev_url.database:
         raise RuntimeError("DATABASE_URL must include a database name to derive the test database")
-    return dev_url.set(database=f"{dev_url.database}_test")
+    return validate_test_database_url(dev_url.set(database=f"{dev_url.database}_test"))
+
+
+def validate_test_database_url(test_url: URL) -> URL:
+    """Refuse any test database that is not clearly isolated by its name."""
+    if not test_url.database or not test_url.database.endswith("_test"):
+        raise RuntimeError("Test database name must end with _test; refusing database setup or cleanup")
+    development_url = database_url()
+    if development_url and test_url.database == make_url(development_url).database:
+        raise RuntimeError("Test database must differ from DATABASE_URL; refusing database setup or cleanup")
+    return test_url

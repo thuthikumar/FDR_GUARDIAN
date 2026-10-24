@@ -10,7 +10,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import URL
 from sqlalchemy.orm import Session
 
-from app.core.config import test_database_url
+from app.core.config import test_database_url, validate_test_database_url
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -56,7 +56,8 @@ def _ensure_test_database(url: URL) -> None:
 @pytest.fixture(scope="session", autouse=True)
 def migrated_test_database() -> Generator[URL, None, None]:
     """Create/migrate and clear only the explicitly separate test database."""
-    url = test_database_url()
+    # Keep this assertion immediately before all database creation/migration/truncation.
+    url = validate_test_database_url(test_database_url())
     _ensure_test_database(url)
     command.upgrade(_alembic_config(url), "head")
 
