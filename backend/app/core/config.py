@@ -2,6 +2,7 @@
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from dotenv import load_dotenv
 from sqlalchemy.engine import URL, make_url
@@ -40,3 +41,60 @@ def validate_test_database_url(test_url: URL) -> URL:
     if development_url and test_url.database == make_url(development_url).database:
         raise RuntimeError("Test database must differ from DATABASE_URL; refusing database setup or cleanup")
     return test_url
+
+
+def jwt_secret_key() -> str:
+    """Load the signing secret without supplying an insecure application default."""
+    value = os.getenv("JWT_SECRET_KEY", "").strip()
+    if len(value) < 32 or any(marker in value.lower() for marker in ("replace", "placeholder", "change-me", "your-secret")):
+        raise RuntimeError("JWT_SECRET_KEY is required and must contain at least 32 characters")
+    return value
+
+
+def access_token_expire_minutes() -> int:
+    return _positive_int("ACCESS_TOKEN_EXPIRE_MINUTES", 15)
+
+
+def refresh_token_expire_days() -> int:
+    return _positive_int("REFRESH_TOKEN_EXPIRE_DAYS", 7)
+
+
+def _positive_int(name: str, default: int) -> int:
+    try:
+        value = int(os.getenv(name, str(default)))
+    except ValueError as exc:
+        raise RuntimeError(f"{name} must be a positive integer") from exc
+    if value <= 0:
+        raise RuntimeError(f"{name} must be a positive integer")
+    return value
+
+
+def app_environment() -> str:
+    return os.getenv("APP_ENV", "development").strip().lower()
+
+
+def cookie_secure() -> bool:
+    raw = os.getenv("COOKIE_SECURE", "false").strip().lower()
+    if raw not in {"true", "false"}:
+        raise RuntimeError("COOKIE_SECURE must be true or false")
+    secure = raw == "true"
+    if app_environment() == "production" and not secure:
+        raise RuntimeError("COOKIE_SECURE must be true when APP_ENV=production")
+    return secure
+
+
+def frontend_origin() -> str:
+    origin = os.getenv("FRONTEND_ORIGIN", "http://127.0.0.1:5173").strip().rstrip("/")
+    parsed = urlsplit(origin)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc or parsed.path or parsed.query or parsed.fragment:
+        raise RuntimeError("FRONTEND_ORIGIN must be an http or https origin")
+    return origin
+
+
+def validate_security_settings() -> None:
+    """Fail application startup when auth secrets or production cookie policy are unsafe."""
+    jwt_secret_key()
+    access_token_expire_minutes()
+    refresh_token_expire_days()
+    cookie_secure()
+    frontend_origin()

@@ -1,4 +1,4 @@
-"""User identity metadata. Authentication is intentionally a later phase."""
+"""User identity, authentication state, and institution-role constraints."""
 
 from datetime import datetime
 from uuid import UUID
