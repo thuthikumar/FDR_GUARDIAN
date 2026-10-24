@@ -1,0 +1,54 @@
+# Secrets and local environment files
+/.env
+/.env.*
+!/.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python virtual environments, bytecode, and test/tool caches
+**/.venv/
+**/venv/
+**/env/
+**/__pycache__/
+*.py[cod]
+*.egg-info/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/.tox/
+**/.nox/
+**/.coverage
+coverage.xml
+htmlcov/
+
+# Node dependencies and generated output
+**/node_modules/
+**/dist/
+**/build/
+**/coverage/
+
+# Private uploaded files and local document storage
+**/uploads/
+**/private/
+**/private-storage/
+**/storage/private/
+
+# Local database files, dumps, and Docker volume data
+**/postgres-data/
+**/db-data/
+**/database-data/
+*.dump
+*.sql
+*.sql.gz
+*.sqlite
+*.sqlite3
+*.db
+
+# IDE and operating-system files
+**/.vscode/
+**/.idea/
+*.suo
+*.user
+.DS_Store
+Thumbs.db
