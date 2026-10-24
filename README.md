@@ -2,7 +2,7 @@
 
 FDR Guardian is an administrative platform foundation for managing institution-wise Fixed Deposit Receipt (FDR) and security deposit lifecycles, including document verification, maturity monitoring, discrepancies, approvals, notifications, and audit history.
 
-The current milestone is **Phase 2: Database Schema, Migrations, and Synthetic Data**. The project contains a React/TypeScript landing page, a FastAPI foundation, PostgreSQL schema managed with Alembic, and clearly labelled synthetic development records. It does not connect to AICTE production systems or contain real institutional FDR records.
+The current milestone is **Phase 3: Authentication, Roles, and Record-Level Authorisation**. The project contains a React/TypeScript login flow, a FastAPI foundation, PostgreSQL schema managed with Alembic, backend-enforced permissions, and clearly labelled synthetic development records. It does not connect to AICTE production systems or contain real institutional FDR records.
 
 ## Prerequisites
 
@@ -44,7 +44,7 @@ From this directory, create a local environment file:
 Copy-Item .env.example .env
 ```
 
-`.env` is excluded from Git. The example password is a placeholder for local development; replace it before using any shared or deployed environment. Keep `POSTGRES_PASSWORD` and the password portion of `DATABASE_URL` in sync. The frontend has its own `frontend/.env.example`; never put secrets in `VITE_` variables because those are bundled into browser code.
+`.env` is excluded from Git. The example values are placeholders; replace them for local development. Generate a JWT secret with `py -c "import secrets; print(secrets.token_urlsafe(48))"` and put the output in `JWT_SECRET_KEY`. Keep `POSTGRES_PASSWORD` and the password portion of `DATABASE_URL` in sync. The frontend has its own `frontend/.env.example`; never put secrets in `VITE_` variables because those are bundled into browser code.
 
 ## Start PostgreSQL
 
@@ -69,7 +69,7 @@ python -m pip install -r requirements.txt
 python -m uvicorn app.main:app --reload
 ```
 
-The backend reads `DATABASE_URL` from the project-level `.env`. Use matching credentials if you changed the Compose environment. The API listens at `http://localhost:8000`; interactive API documentation is at `http://localhost:8000/docs`.
+The backend reads `DATABASE_URL` from the project-level `.env`. Use matching credentials if you changed the Compose environment. The API listens at `http://127.0.0.1:8000`; interactive API documentation is at `http://127.0.0.1:8000/docs`.
 
 ## Apply the database migration
 
@@ -80,14 +80,14 @@ python -m alembic upgrade head
 python -m alembic current
 ```
 
-Alembic reads `DATABASE_URL` from the project `.env`; the URL is not stored in `alembic.ini`. The migration creates the Phase 2 tables, constraints, indexes, and append-only triggers. To verify a local development rollback and re-apply:
+Alembic reads `DATABASE_URL` from the project `.env`; the URL is not stored in `alembic.ini`. Migrations create the Phase 2 data schema and the Phase 3 authentication fields, refresh-token table, and institution-admin constraint, along with their indexes and append-only audit triggers. To verify a local development rollback and re-apply:
 
 ```powershell
 python -m alembic downgrade base
 python -m alembic upgrade head
 ```
 
-`downgrade base` drops the Phase 2 schema and its data from the configured database. Use it only for a disposable local development database. The automated migration round-trip runs on the separate test database.
+`downgrade base` drops the Phase 2 and Phase 3 schema and its data from the configured database. Use it only for a disposable local development database. The automated migration round-trip runs on the separate test database.
 
 ## Seed synthetic data
 
@@ -105,10 +105,39 @@ python -m app.seed --reference-date 2026-10-24
 
 No document files are written. Placeholder storage keys begin with `synthetic/`. All user emails use `@synthetic.invalid`, and seeded password hashes remain null. See [docs/synthetic-data.md](docs/synthetic-data.md) for scenario details and IDs.
 
+## Set local passwords for synthetic users
+
+Set a local `SEED_DEV_PASSWORD` value in `.env` (at least 12 characters), then from `backend/` run:
+
+```powershell
+python -m app.db.set_dev_passwords
+```
+
+This development-only command sets Argon2id hashes for rows marked `is_synthetic=true`. It refuses to run in `APP_ENV=production`, without `SEED_DEV_PASSWORD`, or with the example placeholder. It never prints the password or hashes. It does not set passwords for administrator-created, non-synthetic users. Password reset, email verification, and administrator password provisioning are not implemented in this phase.
+
+Synthetic demo login emails (all use the local `SEED_DEV_PASSWORD`; this README deliberately does not include any password):
+
+- System administrator: `system-admin@synthetic.invalid`
+- Institution administrators: `institution-001-admin@synthetic.invalid` through `institution-010-admin@synthetic.invalid`
+- Verification officers: `verification-01@synthetic.invalid`, `verification-02@synthetic.invalid`
+- Accounts officer: `accounts-01@synthetic.invalid`
+- Final approver: `approver-01@synthetic.invalid`
+- Read-only auditor: `auditor-01@synthetic.invalid`
+
+## Test the login flow
+
+1. Configure `.env` with `JWT_SECRET_KEY` (32+ random characters), `APP_ENV=development`, `COOKIE_SECURE=false`, `FRONTEND_ORIGIN=http://127.0.0.1:5173`, and `SEED_DEV_PASSWORD`.
+2. Start PostgreSQL, apply migrations, seed synthetic records, and run `python -m app.db.set_dev_passwords` from `backend/`.
+3. Start FastAPI on `http://127.0.0.1:8000` and the frontend on `http://127.0.0.1:5173`.
+4. Sign in with any listed synthetic email and the local seed password. The access token stays in browser memory; the refresh token is an HttpOnly cookie.
+5. Use Log out, then reload `/`. The protected route should return to `/login`. The Phase 1 system-status panel remains on the login and authenticated home pages.
+
+The permission mapping is a proposed application design and is not a verified AICTE role structure. Route guards in React are for user experience; all authentication and permissions are enforced by FastAPI. See [docs/phase-3-auth-rbac.md](docs/phase-3-auth-rbac.md) for the role matrix, token lifecycle, audit details, and limitations.
+
 Health endpoints:
 
-- `GET http://localhost:8000/api/v1/health` reports whether the API is running.
-- `GET http://localhost:8000/api/v1/health/database` executes `SELECT 1` and reports `connected`, `unavailable`, or `not_configured`. It does not expose the database URL or exception details.
+- `GET http://127.0.0.1:8000/api/v1/health` reports whether the API is running.
+- `GET http://127.0.0.1:8000/api/v1/health/database` executes `SELECT 1` and reports `connected`, `unavailable`, or `not_configured`. It does not expose the database URL or exception details.
 
 ## Start the frontend
 
@@ -120,7 +149,13 @@ npm.cmd install
 npm.cmd run dev
 ```
 
-Open `http://127.0.0.1:5173`. The page calls the backend health endpoint and displays the actual result. The default backend URL is `http://localhost:8000`; if the backend uses another URL, copy `frontend/.env.example` to `frontend/.env.local` and change `VITE_API_BASE_URL` there.
+Open `http://127.0.0.1:5173`. The page calls the backend health endpoint and displays the actual result. The default backend URL is `http://127.0.0.1:8000`; if the backend uses another URL, copy `frontend/.env.example` to `frontend/.env.local` and change `VITE_API_BASE_URL` there.
+
+Run the frontend login and protected-route tests with:
+
+```powershell
+npm.cmd test
+```
 
 ## Run backend tests
 
@@ -130,6 +165,6 @@ From the `backend` directory, with its virtual environment activated and Postgre
 python -m pytest
 ```
 
-The test suite uses `TEST_DATABASE_URL`, or derives a separate database name by appending `_test` to `DATABASE_URL`. It never runs schema changes or seed data against the development database. If that test database does not exist, the fixture creates it, so the configured database user needs permission to create databases. At session start, tests reset only that dedicated test database and apply migrations. Never point `TEST_DATABASE_URL` at production or at the development database.
+The test suite uses `TEST_DATABASE_URL`, or derives a separate database name by appending `_test` to `DATABASE_URL`. The fixture refuses any database whose name does not end in `_test` or matches `DATABASE_URL`, before it can create, migrate, or clear anything. If the test database does not exist, the fixture creates it, so the configured database user needs permission to create databases. At session start, tests reset only that dedicated test database and apply migrations. Never point `TEST_DATABASE_URL` at production or at the development database.
 
-Phase 2 tests cover health responses, migration upgrade/downgrade/upgrade, schema constraints, synthetic seed scenarios and idempotency, duplicate identifier behavior, active-alert uniqueness, and database-enforced audit immutability.
+Backend tests cover health responses, migration upgrade/downgrade/upgrade, schema constraints, synthetic seed scenarios and idempotency, authentication, lockout and refresh rotation, permissions, institution isolation, user administration, and audit behavior. Frontend tests cover login validation and errors plus protected-route redirects.
