@@ -2,7 +2,7 @@
 
 FDR Guardian is an administrative platform foundation for managing institution-wise Fixed Deposit Receipt (FDR) and security deposit lifecycles, including document verification, maturity monitoring, discrepancies, approvals, notifications, and audit history.
 
-The current milestone is **Phase 3: Authentication, Roles, and Record-Level Authorisation**. The project contains a React/TypeScript login flow, a FastAPI foundation, PostgreSQL schema managed with Alembic, backend-enforced permissions, and clearly labelled synthetic development records. It does not connect to AICTE production systems or contain real institutional FDR records.
+The current milestone is **Phase 4: Institution Management and FDR CRUD**. The project contains a React/TypeScript registry UI, a FastAPI API, PostgreSQL schema managed with Alembic, backend-enforced permissions and institution scope, audit history, and clearly labelled synthetic development records. It does not connect to AICTE production systems or contain real institutional FDR records.
 
 ## Prerequisites
 
@@ -130,9 +130,9 @@ Synthetic demo login emails (all use the local `SEED_DEV_PASSWORD`; this README 
 2. Start PostgreSQL, apply migrations, seed synthetic records, and run `python -m app.db.set_dev_passwords` from `backend/`.
 3. Start FastAPI on `http://127.0.0.1:8000` and the frontend on `http://127.0.0.1:5173`.
 4. Sign in with any listed synthetic email and the local seed password. The access token stays in browser memory; the refresh token is an HttpOnly cookie.
-5. Use Log out, then reload `/`. The protected route should return to `/login`. The Phase 1 system-status panel remains on the login and authenticated home pages.
+5. Use Log out, then reload `/`. The protected route should return to `/login`. The Phase 1 system-status panel remains available on the login screen and in the authenticated app shell.
 
-The permission mapping is a proposed application design and is not a verified AICTE role structure. Route guards in React are for user experience; all authentication and permissions are enforced by FastAPI. See [docs/phase-3-auth-rbac.md](docs/phase-3-auth-rbac.md) for the role matrix, token lifecycle, audit details, and limitations.
+The permission mapping is a proposed application design and is not a verified AICTE role structure. Route guards in React are for user experience; all authentication and permissions are enforced by FastAPI. See [docs/phase-3-auth-rbac.md](docs/phase-3-auth-rbac.md) for the role matrix and authentication details, and [docs/phase-4-fdr-management.md](docs/phase-4-fdr-management.md) for registry endpoints, validation, status transitions, and history.
 
 Health endpoints:
 
@@ -167,4 +167,4 @@ python -m pytest
 
 The test suite uses `TEST_DATABASE_URL`, or derives a separate database name by appending `_test` to `DATABASE_URL`. The fixture refuses any database whose name does not end in `_test` or matches `DATABASE_URL`, before it can create, migrate, or clear anything. If the test database does not exist, the fixture creates it, so the configured database user needs permission to create databases. At session start, tests reset only that dedicated test database and apply migrations. Never point `TEST_DATABASE_URL` at production or at the development database.
 
-Backend tests cover health responses, migration upgrade/downgrade/upgrade, schema constraints, synthetic seed scenarios and idempotency, authentication, lockout and refresh rotation, permissions, institution isolation, user administration, and audit behavior. Frontend tests cover login validation and errors plus protected-route redirects.
+Backend tests cover health responses, migration upgrade/downgrade/upgrade, schema constraints, synthetic seed scenarios and idempotency, authentication, lockout and refresh rotation, registry validation, CRUD, permissions, institution isolation, user administration, and audit behavior. Frontend tests cover login validation, protected-route redirects, registry form validation, list pagination, and error states.
