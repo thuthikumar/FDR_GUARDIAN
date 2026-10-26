@@ -1,11 +1,12 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import type { ReactNode } from 'react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from '../auth/AuthContext'
 import { SourceBadges } from '../components/RegistryPrimitives'
 import { formatHistoryAction, formatHistoryChanges, formatInr } from '../lib/registry'
 import FdrFormPage from './FdrFormPage'
+import FdrDetailPage from './FdrDetailPage'
 import FdrsPage from './FdrsPage'
 
 function jsonResponse(body: unknown, status = 200) {
@@ -27,12 +28,12 @@ function bootstrapResponse(url: string) {
   return null
 }
 
-function record(id: string, internalId: string) {
+function record(id: string, internalId: string, sourceSystem = 'MANUAL_ENTRY') {
   return {
     id, institution_id: 'institution-id', internal_fdr_id: internalId, bank_name: 'Synthetic Bank',
     branch_name: null, fdr_number: `SYN-${id}`, amount: '12500.50', currency: 'INR',
     issue_date: '2025-01-01', maturity_date: '2027-01-01', record_status: 'active',
-    verification_status: 'not_submitted', source_system: 'MANUAL_ENTRY', is_synthetic: true,
+    verification_status: 'not_submitted', source_system: sourceSystem, is_synthetic: true,
     created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
   }
 }
@@ -45,6 +46,48 @@ describe('Phase 4 registry pages', () => {
     const { container } = render(<SourceBadges sourceSystem={sourceSystem} />)
     expect(container.querySelectorAll('[data-slot="badge"]')).toHaveLength(1)
     expect(screen.getByText(label)).toBeInTheDocument()
+  })
+
+  it('shows the source badges on registry rows based only on source_system', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      const bootstrap = bootstrapResponse(url)
+      if (bootstrap) return bootstrap
+      return jsonResponse({ items: [record('manual', 'SYN-MANUAL', 'MANUAL_ENTRY'), record('demo', 'SYN-DEMO', 'SYNTHETIC_DEMO')], total: 2, page: 1, page_size: 10 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    renderWithAuth(<FdrsPage />)
+    const manualRow = (await screen.findByText('SYN-MANUAL')).closest('tr')!
+    const demoRow = screen.getByText('SYN-DEMO').closest('tr')!
+    expect(within(manualRow).getByText('Manual entry')).toBeInTheDocument()
+    expect(within(manualRow).queryByText('Synthetic')).not.toBeInTheDocument()
+    expect(within(manualRow).getByLabelText('Record data source').querySelectorAll('[data-slot="badge"]')).toHaveLength(1)
+    expect(within(demoRow).getByText('Synthetic demo')).toBeInTheDocument()
+    expect(within(demoRow).queryByText('Synthetic')).not.toBeInTheDocument()
+    expect(within(demoRow).getByLabelText('Record data source').querySelectorAll('[data-slot="badge"]')).toHaveLength(1)
+  })
+
+  it('shows exactly one Manual entry badge on FDR details for a synthetic manual record', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      const bootstrap = bootstrapResponse(url)
+      if (bootstrap) return bootstrap
+      if (url.endsWith('/api/v1/fdrs/manual')) return jsonResponse(record('manual', 'SYN-MANUAL', 'MANUAL_ENTRY'))
+      if (url.endsWith('/api/v1/fdrs/manual/history')) return jsonResponse([])
+      return jsonResponse({ detail: 'Unexpected request' }, 500)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<MemoryRouter initialEntries={['/fdrs/manual']}><AuthProvider><Routes><Route path="/fdrs/:recordId" element={<FdrDetailPage />} /></Routes></AuthProvider></MemoryRouter>)
+    const badge = await screen.findByText('Manual entry')
+    const source = screen.getByLabelText('Record data source')
+    expect(badge).toBeInTheDocument()
+    expect(within(source).queryByText('Synthetic')).not.toBeInTheDocument()
+    expect(source.querySelectorAll('[data-slot="badge"]')).toHaveLength(1)
+  })
+
+  it('preserves unknown source_system values verbatim', () => {
+    render(<SourceBadges sourceSystem="LEGACY_SOURCE_X" />)
+    expect(screen.getByText('LEGACY_SOURCE_X')).toBeInTheDocument()
   })
 
   it('humanises and formats only business fields in history', () => {

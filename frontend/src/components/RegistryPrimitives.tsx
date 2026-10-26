@@ -39,7 +39,7 @@ export function StatusBadge({ value }: { value: string }) {
 export function SourceBadges({ sourceSystem }: { sourceSystem: string }) {
   const label = sourceSystem === 'SYNTHETIC_DEMO' ? 'Synthetic demo'
     : sourceSystem === 'MANUAL_ENTRY' ? 'Manual entry'
-      : sourceSystem.replaceAll('_', ' ')
+      : sourceSystem
   return <div className="flex flex-wrap gap-1.5" aria-label="Record data source">
     <Badge variant="outline" className={sourceSystem === 'MANUAL_ENTRY'
       ? 'border-violet-200 bg-violet-50 text-violet-800'
