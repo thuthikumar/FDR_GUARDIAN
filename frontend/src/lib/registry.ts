@@ -50,6 +50,35 @@ export type FdrHistoryItem = {
   remarks: string | null
 }
 
+const historyFieldLabels: Record<string, string> = {
+  fdr_number: 'FDR number', bank_name: 'Bank name', branch_name: 'Branch name',
+  issue_date: 'Issue date', maturity_date: 'Maturity date', amount: 'Amount',
+  currency: 'Currency', record_status: 'Record status',
+}
+
+export function formatHistoryAction(action: string): string {
+  if (action === 'fdr_created') return 'Record created'
+  if (action === 'fdr_updated') return 'Record updated'
+  if (action === 'fdr_status_changed') return 'Status changed'
+  return action.replaceAll('_', ' ')
+}
+
+export function formatHistoryChanges(item: FdrHistoryItem): Array<{ field: string; oldValue: string; newValue: string }> {
+  return Object.entries(item.changed_fields).flatMap(([key, change]) => {
+    const label = historyFieldLabels[key]
+    if (!label) return []
+    if (item.action === 'fdr_created' && (change.new === null || change.new === undefined || change.new === '')) return []
+    const formatValue = (value: unknown) => {
+      if (value === null || value === undefined || value === '') return '—'
+      if (key === 'amount') return formatInr(String(value), 'INR')
+      if (key === 'issue_date' || key === 'maturity_date') return formatDate(String(value))
+      if (key === 'record_status' && typeof value === 'string') return value.replaceAll('_', ' ')
+      return String(value)
+    }
+    return [{ field: label, oldValue: formatValue(change.old), newValue: formatValue(change.new) }]
+  })
+}
+
 export async function responseError(response: Response): Promise<string> {
   try {
     const body = await response.json() as { detail?: unknown }

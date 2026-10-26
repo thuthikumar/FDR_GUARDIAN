@@ -32,6 +32,7 @@ STATUS_TRANSITIONS: dict[str, frozenset[str]] = {
     FDRRecordStatus.CANCELLED.value: frozenset(),
 }
 EDITABLE_FIELDS = ("bank_name", "branch_name", "fdr_number", "amount", "currency", "issue_date", "maturity_date")
+HISTORY_FIELDS = frozenset({"fdr_number", "bank_name", "branch_name", "issue_date", "maturity_date", "amount", "currency", "record_status"})
 
 
 def _response(record: FDRRecord) -> FDRResponse:
@@ -295,15 +296,23 @@ def get_fdr_history(
         .where(AuditEvent.entity_type == "fdr_record", AuditEvent.entity_id == record_id)
         .order_by(AuditEvent.timestamp.desc(), AuditEvent.id.desc())
     ).all()
-    return [
-        FDRHistoryItem(
+    history = []
+    for event, actor_name in rows:
+        if event.action not in {"fdr_created", "fdr_updated", "fdr_status_changed"}:
+            continue
+        changed_fields = {
+            field: change
+            for field, change in event.change_summary.get("fields", {}).items()
+            if field in HISTORY_FIELDS
+            and isinstance(change, dict)
+            and (event.action != "fdr_created" or change.get("new") not in (None, ""))
+        }
+        history.append(FDRHistoryItem(
             id=event.id,
             action=event.action,
             actor_name=actor_name or "System",
             timestamp=event.timestamp,
-            changed_fields=event.change_summary.get("fields", {}),
+            changed_fields=changed_fields,
             remarks=event.change_summary.get("remarks"),
-        )
-        for event, actor_name in rows
-        if event.action in {"fdr_created", "fdr_updated", "fdr_status_changed"}
-    ]
+        ))
+    return history

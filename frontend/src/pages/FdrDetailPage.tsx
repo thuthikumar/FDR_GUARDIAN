@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { PageHeading, SourceBadges, StateMessage, StatusBadge } from '../components/RegistryPrimitives'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { formatDate, formatInr, responseError, type FdrHistoryItem, type FdrRecord } from '../lib/registry'
+import { formatDate, formatInr, formatHistoryAction, formatHistoryChanges, responseError, type FdrHistoryItem, type FdrRecord } from '../lib/registry'
 
 const transitions: Record<string, string[]> = {
   draft: ['active', 'cancelled'], active: ['matured', 'cancelled'], matured: ['released'], released: [], cancelled: [],
@@ -80,15 +80,15 @@ export default function FdrDetailPage() {
             <Detail label="Issue date" value={formatDate(record.issue_date)} /><Detail label="Maturity date" value={formatDate(record.maturity_date)} />
             <div><dt className="text-xs uppercase text-slate-500">Record status</dt><dd className="mt-1"><StatusBadge value={record.record_status} /></dd></div>
             <div><dt className="text-xs uppercase text-slate-500">Verification status</dt><dd className="mt-1"><StatusBadge value={record.verification_status} /></dd></div>
-            <div className="sm:col-span-2"><dt className="mb-1 text-xs uppercase text-slate-500">Data source</dt><dd><SourceBadges isSynthetic={record.is_synthetic} sourceSystem={record.source_system} /></dd></div>
+            <div className="sm:col-span-2"><dt className="mb-1 text-xs uppercase text-slate-500">Data source</dt><dd><SourceBadges sourceSystem={record.source_system} /></dd></div>
           </dl>
         </CardContent></Card>
         <Card><CardHeader><CardTitle className="text-base">Change history</CardTitle></CardHeader><CardContent>
           {history.length === 0 ? <p className="text-sm text-slate-500">No changes have been recorded yet.</p> : <ol className="space-y-5 border-l border-slate-200 pl-5">
             {history.map((item) => <li key={item.id} className="relative"><span className="absolute -left-[1.6rem] top-1 size-2.5 rounded-full bg-blue-700" />
-              <p className="text-sm font-semibold">{item.action.replaceAll('_', ' ')} <span className="font-normal text-slate-500">by {item.actor_name}</span></p>
+              <p className="text-sm font-semibold">{formatHistoryAction(item.action)} <span className="font-normal text-slate-500">by {item.actor_name}</span></p>
               <time className="text-xs text-slate-500" dateTime={item.timestamp}>{new Date(item.timestamp).toLocaleString('en-IN')}</time>
-              <ul className="mt-2 space-y-1 text-sm text-slate-700">{Object.entries(item.changed_fields).map(([field, change]) => <li key={field}><span className="capitalize">{field.replaceAll('_', ' ')}</span>: {String(change.old ?? '—')} → {String(change.new ?? '—')}</li>)}</ul>
+              <ul className="mt-2 space-y-1 text-sm text-slate-700">{formatHistoryChanges(item).map(({ field, oldValue, newValue }) => <li key={field}><span>{field}</span>: {oldValue} → {newValue}</li>)}</ul>
               {item.remarks && <p className="mt-2 rounded-lg bg-slate-50 p-3 text-sm text-slate-700">{item.remarks}</p>}
             </li>)}
           </ol>}

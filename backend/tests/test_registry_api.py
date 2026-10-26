@@ -271,6 +271,22 @@ def test_fdr_create_duplicates_allowed_and_response_hides_internal_model_fields(
     assert db_session.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.action == "fdr_created")) == 2
 
 
+def test_fdr_history_creation_returns_business_fields_only(api_client, db_session: Session) -> None:
+    institution = add_institution(db_session)
+    admin = add_user(db_session, UserRole.INSTITUTION_ADMIN.value, institution.id)
+    headers = auth(admin)
+    created = api_client.post("/api/v1/fdrs", json=create_body(institution.id, branch_name=None), headers=headers)
+    assert created.status_code == 201
+
+    history = api_client.get(f"/api/v1/fdrs/{created.json()['id']}/history", headers=headers)
+    assert history.status_code == 200
+    changed_fields = history.json()[0]["changed_fields"]
+    assert set(changed_fields) == {"bank_name", "fdr_number", "amount", "currency", "issue_date", "maturity_date", "record_status"}
+    assert changed_fields["bank_name"]["new"] == "Synthetic New Bank"
+    assert changed_fields["amount"]["new"] == "25000.50"
+    assert not {"institution_id", "internal_fdr_id", "is_synthetic", "source_system", "verification_status", "id"} & set(changed_fields)
+
+
 def test_fdr_update_stale_and_protected_fields(api_client, db_session: Session) -> None:
     institution = add_institution(db_session)
     admin = add_user(db_session, UserRole.INSTITUTION_ADMIN.value, institution.id)

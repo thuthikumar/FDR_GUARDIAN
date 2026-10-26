@@ -77,7 +77,7 @@ export default function FdrsPage() {
                   <td className="px-4 py-4 whitespace-nowrap">{formatInr(record.amount, record.currency)}</td>
                   <td className="px-4 py-4 whitespace-nowrap">{formatDate(record.maturity_date)}</td>
                   <td className="px-4 py-4"><div className="flex flex-col items-start gap-1"><StatusBadge value={record.record_status} /><StatusBadge value={record.verification_status} /></div></td>
-                  <td className="px-4 py-4"><SourceBadges isSynthetic={record.is_synthetic} sourceSystem={record.source_system} /></td>
+                  <td className="px-4 py-4"><SourceBadges sourceSystem={record.source_system} /></td>
                 </tr>)}</tbody>
               </table></div>
               <Pager page={data.page} pageSize={data.page_size} total={data.total} onPageChange={setPage} />

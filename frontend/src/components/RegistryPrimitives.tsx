@@ -36,11 +36,13 @@ export function StatusBadge({ value }: { value: string }) {
   return <Badge variant="outline" className={`border-transparent capitalize ${tone}`}>{value.replaceAll('_', ' ')}</Badge>
 }
 
-export function SourceBadges({ isSynthetic, sourceSystem }: { isSynthetic: boolean; sourceSystem: string }) {
+export function SourceBadges({ sourceSystem }: { sourceSystem: string }) {
+  const label = sourceSystem === 'SYNTHETIC_DEMO' ? 'Synthetic demo'
+    : sourceSystem === 'MANUAL_ENTRY' ? 'Manual entry'
+      : sourceSystem.replaceAll('_', ' ')
   return <div className="flex flex-wrap gap-1.5" aria-label="Record data source">
-    {isSynthetic && <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-800">Synthetic</Badge>}
-    {sourceSystem === 'MANUAL_ENTRY'
-      ? <Badge variant="outline" className="border-violet-200 bg-violet-50 text-violet-800">Manual entry</Badge>
-      : <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">{sourceSystem.replaceAll('_', ' ')}</Badge>}
+    <Badge variant="outline" className={sourceSystem === 'MANUAL_ENTRY'
+      ? 'border-violet-200 bg-violet-50 text-violet-800'
+      : 'border-slate-200 bg-slate-50 text-slate-700'}>{label}</Badge>
   </div>
 }
