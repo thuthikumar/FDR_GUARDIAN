@@ -355,8 +355,10 @@ def test_fdr_status_transition_history_and_audit(api_client, db_session: Session
     assert missing_remarks.status_code == 422
     history = api_client.get(f"/api/v1/fdrs/{record.id}/history", headers=headers)
     assert history.status_code == 200
+    assert history.json()[0]["action"] == "fdr_status_changed"
     assert history.json()[0]["remarks"] == "Synthetic activation"
     assert history.json()[0]["changed_fields"]["record_status"] == {"old": "draft", "new": "active"}
+    assert set(history.json()[0]["changed_fields"]) == {"record_status"}
     assert history.json()[0]["actor_name"] == admin.full_name
     audit_count = db_session.scalar(
         select(func.count()).select_from(AuditEvent).where(AuditEvent.entity_id == record.id)

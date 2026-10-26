@@ -95,9 +95,10 @@ describe('Phase 4 registry pages', () => {
       id: 'history-id', action: 'fdr_created', actor_name: 'Synthetic Tester', timestamp: '2026-01-01T00:00:00Z', remarks: null,
       changed_fields: {
         internal_fdr_id: { old: null, new: 'INT-001' }, institution_id: { old: null, new: 'institution-id' },
-        source_system: { old: null, new: 'MANUAL_ENTRY' }, branch_name: { old: null, new: null },
+        source_system: { old: null, new: 'MANUAL_ENTRY' }, verification_status: { old: null, new: 'not_submitted' },
+        is_synthetic: { old: null, new: true }, branch_name: { old: null, new: null },
         bank_name: { old: null, new: 'Synthetic Bank' }, fdr_number: { old: null, new: 'SYN-001' },
-        amount: { old: null, new: '12500.50' }, issue_date: { old: null, new: '2025-01-01' },
+        amount: { old: null, new: '12500.50' }, currency: { old: null, new: 'INR' }, issue_date: { old: null, new: '2025-01-01' },
         maturity_date: { old: null, new: '2027-01-01' }, record_status: { old: null, new: 'draft' },
       },
     }
@@ -108,10 +109,37 @@ describe('Phase 4 registry pages', () => {
       { field: 'Bank name', oldValue: '—', newValue: 'Synthetic Bank' },
       { field: 'FDR number', oldValue: '—', newValue: 'SYN-001' },
       { field: 'Amount', oldValue: '—', newValue: formatInr('12500.50') },
+      { field: 'Currency', oldValue: '—', newValue: 'INR' },
       { field: 'Issue date', oldValue: '—', newValue: '01 Jan 2025' },
       { field: 'Maturity date', oldValue: '—', newValue: '01 Jan 2027' },
       { field: 'Record status', oldValue: '—', newValue: 'draft' },
     ])
+  })
+
+  it('shows a humanised status change and its remarks in the history timeline', async () => {
+    const changed = {
+      id: 'status-event', action: 'fdr_status_changed', actor_name: 'Synthetic Institution Admin', timestamp: '2026-01-01T00:00:00Z',
+      changed_fields: {
+        record_status: { old: 'active', new: 'cancelled' }, internal_fdr_id: { old: 'SECRET-ID', new: 'SECRET-ID' },
+        institution_id: { old: 'internal-institution', new: 'internal-institution' },
+      }, remarks: 'Synthetic cancellation recorded after review',
+    }
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      const bootstrap = bootstrapResponse(url)
+      if (bootstrap) return bootstrap
+      if (url.endsWith('/api/v1/fdrs/changed')) return jsonResponse(record('changed', 'SYN-CHANGED'))
+      if (url.endsWith('/api/v1/fdrs/changed/history')) return jsonResponse([changed])
+      return jsonResponse({ detail: 'Unexpected request' }, 500)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<MemoryRouter initialEntries={['/fdrs/changed']}><AuthProvider><Routes><Route path="/fdrs/:recordId" element={<FdrDetailPage />} /></Routes></AuthProvider></MemoryRouter>)
+    expect(await screen.findByText(/Status changed/)).toBeInTheDocument()
+    const historyLabel = screen.getAllByText('Record status').find((element) => element.tagName === 'SPAN')!
+    expect(historyLabel.closest('li')).toHaveTextContent('Record status: active → cancelled')
+    expect(screen.getByText('Synthetic cancellation recorded after review')).toBeInTheDocument()
+    expect(screen.queryByText('SECRET-ID')).not.toBeInTheDocument()
+    expect(screen.queryByText('internal institution → internal institution')).not.toBeInTheDocument()
   })
 
   it('validates FDR amounts before sending a create request', async () => {
