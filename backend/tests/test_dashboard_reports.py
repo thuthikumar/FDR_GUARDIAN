@@ -54,7 +54,7 @@ def test_dashboard_reports_scope_metrics_and_csv_audit(api_client, db_session):
     summary = api_client.get("/api/v1/dashboard/summary", headers=auth(admin))
     assert summary.status_code == 200
     assert summary.json() == {"total_institutions": 1, "total_fdr_records": 2, "active_records": 1,
-        "upcoming_maturities": 1, "overdue_date_review": 1, "pending_verification_cases": 1, "unresolved_alerts": 1}
+        "upcoming_maturities": 1, "overdue_date_review": 0, "pending_verification_cases": 1, "unresolved_alerts": 1}
     chart = api_client.get("/api/v1/dashboard/charts", headers=auth(admin)).json()
     assert chart["institution_distribution"][0]["label"] == "Synthetic A"
     assert chart["institution_distribution"][0]["count"] == 2

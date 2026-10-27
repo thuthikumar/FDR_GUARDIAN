@@ -5,7 +5,7 @@ from app.models.documents import Document, ExtractedField
 from app.models.fdr import FDRRecord
 from app.models.institutions import Institution
 from app.models.integrations import IntegrationSyncRun
-from app.models.monitoring import Alert, AuditEvent, Notification
+from app.models.monitoring import Alert, AuditEvent, MaturityRule, MonitoringJobRun, Notification
 from app.models.users import User
 from app.models.workflow import ApprovalAction, ReleaseEvent, VerificationCase
 
@@ -17,6 +17,8 @@ __all__ = [
     "ExtractedField",
     "FDRRecord",
     "Institution",
+    "MaturityRule",
+    "MonitoringJobRun",
     "IntegrationSyncRun",
     "Notification",
     "ReleaseEvent",

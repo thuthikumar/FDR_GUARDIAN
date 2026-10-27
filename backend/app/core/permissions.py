@@ -14,6 +14,8 @@ class Permission(StrEnum):
     FDR_WRITE = "fdr.write"
     ALERT_READ = "alert.read"
     ALERT_MANAGE = "alert.manage"
+    MONITORING_RUN = "monitoring.run"
+    MONITORING_CONFIGURE = "monitoring.configure"
     CASE_READ = "case.read"
     CASE_REVIEW = "case.review"
     CASE_FINANCIAL_REVIEW = "case.financial_review"
@@ -30,7 +32,8 @@ class Permission(StrEnum):
 ROLE_PERMISSIONS: dict[str, frozenset[Permission]] = {
     UserRole.SYSTEM_ADMIN.value: frozenset({
         Permission.USER_MANAGE, Permission.AUDIT_READ, Permission.INSTITUTION_READ, Permission.INSTITUTION_WRITE, Permission.FDR_READ,
-        Permission.ALERT_READ, Permission.CASE_READ, Permission.REPORT_READ, Permission.INTEGRATION_MANAGE,
+        Permission.ALERT_READ, Permission.ALERT_MANAGE, Permission.MONITORING_RUN, Permission.MONITORING_CONFIGURE,
+        Permission.CASE_READ, Permission.REPORT_READ, Permission.INTEGRATION_MANAGE,
     }),
     UserRole.INSTITUTION_ADMIN.value: frozenset({
         Permission.INSTITUTION_READ, Permission.FDR_READ, Permission.FDR_WRITE, Permission.DOCUMENT_UPLOAD,

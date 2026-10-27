@@ -164,6 +164,9 @@ def _case_scenarios(reference_date: date) -> dict[int, dict[str, object]]:
 
 def seed_synthetic_data(session: Session, reference_date: date | None = None) -> dict[str, int]:
     """Insert or update the fixed demo dataset without duplicating rows."""
+    from app.services.monitoring import ensure_default_maturity_rules
+
+    ensure_default_maturity_rules(session)
     reference_date = reference_date or date.today()
     rng = random.Random(RANDOM_SEED)
     today_utc = datetime.combine(reference_date, time.min, tzinfo=timezone.utc)
@@ -375,7 +378,9 @@ def seed_synthetic_data(session: Session, reference_date: date | None = None) ->
         alert_id_key = f"scenario-alert-{number:04d}-{alert_type}"
         created_at = today_utc - timedelta(days=3)
         resolved = status == AlertStatus.RESOLVED
-        _upsert_stable(
+        seed_source = "system_rule" if alert_type == "maturity_upcoming" and status in (AlertStatus.OPEN, AlertStatus.ACKNOWLEDGED) else "legacy_seed"
+        seed_rule = "maturity_upcoming" if seed_source == "system_rule" else None
+        _insert_stable(
             session,
             Alert,
             alert_id_key,
@@ -385,6 +390,9 @@ def seed_synthetic_data(session: Session, reference_date: date | None = None) ->
                 "severity": severity.value,
                 "explanation": explanation,
                 "status": status.value,
+                "source": seed_source,
+                "rule_key": seed_rule,
+                "details": {"legacy_seeded": True, "maturity_date": records[number].maturity_date.isoformat()},
                 "created_at": created_at,
                 "resolved_at": today_utc if resolved else None,
                 "resolved_by": auditor.id if resolved else None,

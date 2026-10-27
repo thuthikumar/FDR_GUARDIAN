@@ -6,7 +6,6 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Literal
 from uuid import UUID, uuid4
-from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import Response
@@ -15,22 +14,19 @@ from sqlalchemy.orm import Session
 
 from app.api.dependencies import require_permission
 from app.core.permissions import Permission, permissions_for_role
-from app.core.config import maturity_thresholds
+from app.core.config import app_timezone, maturity_thresholds
 from app.db.session import get_session
 from app.models.enums import AlertStatus, FDRRecordStatus, UserRole, WorkflowStatus
 from app.models.fdr import FDRRecord
 from app.models.institutions import Institution
-from app.models.monitoring import Alert
 from app.models.users import User
 from app.models.workflow import VerificationCase
 from app.schemas.reports import (CountPoint, DashboardCharts, DashboardSummary, InstitutionSummaryPage,
     InstitutionSummaryRow, MaturityReportPage, MaturityReportRow)
 from app.services.audit import write_audit_event
+from app.services.monitoring import monitoring_aggregates
 
 router = APIRouter(tags=["dashboard and reports"])
-TZ = ZoneInfo("Asia/Kolkata")
-
-
 def maturity_bucket(days: int, *, upcoming_days: int = 90, attention_days: int = 30,
                     urgent_days: int = 7) -> str:
     if days < 0:
@@ -49,7 +45,7 @@ def configured_thresholds() -> tuple[int, int, int]:
 
 
 def _today(now: datetime | None = None) -> date:
-    return (now or datetime.now(TZ)).astimezone(TZ).date()
+    return (now or datetime.now(app_timezone())).astimezone(app_timezone()).date()
 
 
 def _csv_safe(value: str) -> str:
@@ -76,11 +72,12 @@ def dashboard_summary(user: User = Depends(require_permission(Permission.REPORT_
     scoped_ids = select(base.c.id)
     active = _count(session, select(func.count()).select_from(FDRRecord).where(FDRRecord.id.in_(scoped_ids), FDRRecord.record_status == FDRRecordStatus.ACTIVE.value))
     total = _count(session, select(func.count()).select_from(base))
-    upcoming = _count(session, select(func.count()).select_from(FDRRecord).where(FDRRecord.id.in_(scoped_ids), FDRRecord.maturity_date >= today, FDRRecord.maturity_date <= today + timedelta(days=90)))
-    overdue = _count(session, select(func.count()).select_from(FDRRecord).where(FDRRecord.id.in_(scoped_ids), FDRRecord.maturity_date < today))
+    _, _, by_alert_status, maturity_by_band = monitoring_aggregates(session, user, today)
+    upcoming = sum(count for key, count in maturity_by_band.items() if key not in {"maturity_normal", "maturity_overdue_date_review"})
+    overdue = maturity_by_band.get("maturity_overdue_date_review", 0)
     pending_statuses = [WorkflowStatus.SUBMITTED.value, WorkflowStatus.UNDER_REVIEW.value, WorkflowStatus.MORE_INFORMATION_REQUIRED.value, WorkflowStatus.PENDING_APPROVAL.value, WorkflowStatus.RELEASE_PENDING.value]
     pending = _count(session, select(func.count()).select_from(VerificationCase).where(VerificationCase.fdr_record_id.in_(scoped_ids), VerificationCase.status.in_(pending_statuses)))
-    unresolved = _count(session, select(func.count()).select_from(Alert).where(Alert.fdr_record_id.in_(scoped_ids), Alert.status.in_([AlertStatus.OPEN.value, AlertStatus.ACKNOWLEDGED.value])))
+    unresolved = by_alert_status.get(AlertStatus.OPEN.value, 0) + by_alert_status.get(AlertStatus.ACKNOWLEDGED.value, 0)
     inst_stmt = select(func.count()).select_from(Institution)
     if user.role == UserRole.INSTITUTION_ADMIN.value:
         inst_stmt = inst_stmt.where(Institution.id == user.institution_id)
@@ -143,7 +140,7 @@ def institution_summary(page: int = Query(1, ge=1), page_size: int = Query(25, g
     if format == "csv":
         output = io.StringIO(newline="")
         writer = csv.writer(output)
-        writer.writerow(["Generated at", datetime.now(TZ).isoformat()]); writer.writerow(["Data source", "synthetic demo"])
+        writer.writerow(["Generated at", datetime.now(app_timezone()).isoformat()]); writer.writerow(["Data source", "synthetic demo"])
         writer.writerow(["Institution", "Total FDRs", "Active FDRs", "Total principal (INR)", "Nearest upcoming maturity"])
         for row in items:
             values = [row.institution_name, str(row.total_fdrs), str(row.active_fdrs), str(row.total_principal), row.nearest_upcoming_maturity.isoformat() if row.nearest_upcoming_maturity else ""]
@@ -209,7 +206,7 @@ def maturities(maturity_from: date | None = None, maturity_to: date | None = Non
         selected = [to_row(r) for r in rows]
         output = io.StringIO(newline="")
         writer = csv.writer(output)
-        generated = datetime.now(TZ).isoformat()
+        generated = datetime.now(app_timezone()).isoformat()
         writer.writerow(["Generated at", generated]); writer.writerow(["Data source", "synthetic demo"])
         headers = ["Institution", "Internal FDR ID", "FDR number", "Bank", "Principal", "Currency", "Maturity date", "Record status", "Maturity bucket"]
         writer.writerow(headers)
