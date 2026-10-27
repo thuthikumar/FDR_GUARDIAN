@@ -18,6 +18,7 @@ def main() -> None:
         raise SystemExit("Generate fixtures first: python -m scripts.generate_ocr_fixtures")
     print(f"Tesseract available: {tesseract_available()}")
     fixture_records = {"text_layer.pdf": "SYN-FDR-0001", "clean.png": "SYN-FDR-0001",
+                       "lightly_noisy.jpg": "SYN-FDR-0001",
                        "image_only.pdf": "SYN-FDR-0005", "noisy.jpg": "SYN-FDR-0007"}
     factory = make_session_factory()
     for path in sorted(root.iterdir()):

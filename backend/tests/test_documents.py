@@ -394,37 +394,53 @@ def test_safe_failure_code_and_stale_processing_detection(db_engine):
 def real_ocr_fixture(tmp_path: Path, fixture_kind: str) -> tuple[Path, str]:
     lines=["SYNTHETIC SAMPLE - NOT A REAL DOCUMENT", "FDR Number: SYNTH-FDR-0001",
            "Bank Name: Synthetic Community Bank 01", "Amount: INR 2,35,357.00",
-           "Maturity Date: 24 Oct 2027"]
+           "Interest Rate: 7.25%", "Maturity Date: 24 Oct 2027"]
     image=Image.new("RGB",(1700,1100),"white")
     draw=ImageDraw.Draw(image);font=ImageFont.load_default(size=40)
     for index,line in enumerate(lines):draw.text((55,50+index*150),line,fill="black",font=font)
-    if fixture_kind=="noisy_jpeg":
+    if fixture_kind in {"noisy_jpeg", "lightly_noisy_jpeg"}:
         rng=random.Random(26265);pixels=image.load()
-        for _ in range(25000):
+        for _ in range(25000 if fixture_kind=="noisy_jpeg" else 8500):
             x,y=rng.randrange(image.width),rng.randrange(image.height);shade=rng.randrange(160,256);pixels[x,y]=(shade,shade,shade)
-        image=image.filter(ImageFilter.GaussianBlur(3.0))
+        if fixture_kind=="noisy_jpeg":
+            image=image.filter(ImageFilter.GaussianBlur(3.0))
+        else:
+            region=image.crop((40,330,1660,470)).filter(ImageFilter.GaussianBlur(5.0))
+            image.paste(region,(40,330))
     if fixture_kind=="blank_image":
         image=Image.new("RGB",(1700,1100),"white");ImageDraw.Draw(image).text((55,50),"SYNTHETIC SAMPLE - NOT A REAL DOCUMENT",fill="black",font=font)
-    image_path=tmp_path/("fixture.jpg" if fixture_kind=="noisy_jpeg" else "fixture.png")
-    image.save(image_path,format="JPEG" if fixture_kind=="noisy_jpeg" else "PNG",quality=8 if fixture_kind=="noisy_jpeg" else None)
+    is_jpeg=fixture_kind in {"noisy_jpeg", "lightly_noisy_jpeg"}
+    image_path=tmp_path/("fixture.jpg" if is_jpeg else "fixture.png")
+    image.save(image_path,format="JPEG" if is_jpeg else "PNG",quality=8 if fixture_kind=="noisy_jpeg" else 35 if is_jpeg else None)
     if fixture_kind=="image_pdf":
         output=io.BytesIO();doc=canvas.Canvas(output,pagesize=letter);doc.drawImage(ImageReader(image),0,0,width=letter[0],height=letter[1]);doc.save()
         path=tmp_path/"fixture.pdf";path.write_bytes(output.getvalue());return path,"application/pdf"
-    return image_path,"image/jpeg" if fixture_kind=="noisy_jpeg" else "image/png"
+    return image_path,"image/jpeg" if is_jpeg else "image/png"
 
 
-@pytest.mark.parametrize("fixture_kind",["image_pdf","png","noisy_jpeg","blank_image"])
+@pytest.mark.parametrize("fixture_kind",["image_pdf","png","lightly_noisy_jpeg","noisy_jpeg","blank_image"])
 @pytest.mark.skipif(not processing.tesseract_available(),reason="Tesseract binary not installed or unavailable on PATH")
 def test_real_tesseract_synthetic_fixture_smoke(fixture_kind,tmp_path):
     path,content_type=real_ocr_fixture(tmp_path,fixture_kind)
     candidates,pages,method,engine=processing._extract(path,content_type,processing.TesseractOcrEngine())
     assert pages==1 and method=="ocr" and engine.startswith("Tesseract ")
+    if fixture_kind in {"image_pdf", "png", "lightly_noisy_jpeg"}:
+        assert candidates["interest_rate"].value == "7.25%"
     if fixture_kind=="blank_image":
         assert candidates["fdr_number"].value is None
     elif fixture_kind=="noisy_jpeg":
         expected = {"fdr_number": "SYNTH-FDR-0001", "bank_name": "Synthetic Community Bank 01",
-                    "branch_name": "Synthetic Branch 001", "amount": "INR 235,357.00",
-                    "issue_date": "05 Mar 2024", "maturity_date": "24 Oct 2027"}
+                    "branch_name": "Synthetic Branch 001", "amount": "INR 2,35,357.00",
+                    "interest_rate": "7.25%", "issue_date": "05 Mar 2024", "maturity_date": "24 Oct 2027"}
+        assert any(candidates[field].value is None or candidates[field].confidence is None
+                   or candidates[field].confidence < 0.85 for field in expected)
+        assert all(candidate.value == expected[field] for field, candidate in candidates.items()
+                   if candidate.value and candidate.confidence is not None and candidate.confidence >= 0.85)
+    elif fixture_kind=="lightly_noisy_jpeg":
+        expected = {"fdr_number": "SYNTH-FDR-0001", "bank_name": "Synthetic Community Bank 01",
+                    "branch_name": "Synthetic Branch 001", "amount": "INR 2,35,357.00",
+                    "interest_rate": "7.25%", "issue_date": "05 Mar 2024", "maturity_date": "24 Oct 2027"}
+        assert any(candidates[field].value for field in expected)
         assert any(candidates[field].value is None or candidates[field].confidence is None
                    or candidates[field].confidence < 0.85 for field in expected)
         assert all(candidate.value == expected[field] for field, candidate in candidates.items()

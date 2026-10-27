@@ -29,11 +29,14 @@ def _record(session: Session, internal_id: str) -> FDRRecord:
     return row
 
 
-def _lines(record: FDRRecord, *, amount=None, maturity=None) -> list[str]:
-    return [MARK, f"Bank Name: {record.bank_name}", f"Branch Name: {record.branch_name}",
+def _lines(record: FDRRecord, *, amount=None, maturity=None, interest_rate: str | None = None) -> list[str]:
+    lines = [MARK, f"Bank Name: {record.bank_name}", f"Branch Name: {record.branch_name}",
         f"FDR Number: {record.fdr_number}", f"Principal Amount: INR {amount if amount is not None else record.amount:,.2f}",
         f"Issue Date: {record.issue_date.strftime('%d %b %Y')}",
         f"Maturity Date: {(maturity or record.maturity_date).strftime('%d %b %Y')}"]
+    if interest_rate is not None:
+        lines.insert(5, f"Interest Rate: {interest_rate}")
+    return lines
 
 
 def _pdf(lines: list[str]) -> bytes:
@@ -45,22 +48,27 @@ def _pdf(lines: list[str]) -> bytes:
     return output.getvalue()
 
 
-def _image(lines: list[str], *, noisy=False) -> bytes:
+def _image(lines: list[str], *, noisy=False, lightly_noisy=False) -> bytes:
     image = Image.new("RGB", (1500, 1100), "white")
     draw = ImageDraw.Draw(image)
     font = ImageFont.load_default(size=32)
     for index, line in enumerate(lines):
         draw.text((55, 55 + index * 105), line, fill="black", stroke_width=0, font=font)
-    if noisy:
-        rng = random.Random(26265)
+    if noisy or lightly_noisy:
+        rng = random.Random(26265 if noisy else 7182)
         pixels = image.load()
-        for _ in range(19000):
+        for _ in range(19000 if noisy else 6500):
             x, y = rng.randrange(image.width), rng.randrange(image.height)
             shade = rng.randrange(150, 256)
             pixels[x, y] = (shade, shade, shade)
-        image = image.filter(ImageFilter.GaussianBlur(3.0))
+        if noisy:
+            image = image.filter(ImageFilter.GaussianBlur(3.0))
+        elif lightly_noisy:
+            region = image.crop((35, 240, 1465, 360)).filter(ImageFilter.GaussianBlur(5.0))
+            image.paste(region, (35, 240))
     output = io.BytesIO()
-    image.save(output, format="PNG" if not noisy else "JPEG", quality=8 if noisy else None)
+    image.save(output, format="JPEG" if noisy or lightly_noisy else "PNG",
+               quality=8 if noisy else 35 if lightly_noisy else None)
     return output.getvalue()
 
 
@@ -74,9 +82,10 @@ def generate(output: Path | None = None) -> dict[str, Path]:
             amount_diff = _record(session, "SYN-FDR-0005")
             date_diff = _record(session, "SYN-FDR-0007")
             fixtures = {
-                "text_layer.pdf": _pdf(_lines(match)),
+                "text_layer.pdf": _pdf(_lines(match, interest_rate="7.25%")),
                 "image_only.pdf": _pdf([MARK, "SYNTHETIC SCANNED STYLE - NOT A REAL DOCUMENT"]),
-                "clean.png": _image(_lines(match)),
+                "clean.png": _image(_lines(match, interest_rate="7.25%")),
+                "lightly_noisy.jpg": _image(_lines(match, interest_rate="7.25%"), lightly_noisy=True),
                 "noisy.jpg": _image(_lines(date_diff, maturity=date_diff.maturity_date.replace(day=2 if date_diff.maturity_date.day == 1 else 1)), noisy=True),
                 "blank.png": _image([MARK, "INTENTIONALLY BLANK SYNTHETIC IMAGE"]),
             }
