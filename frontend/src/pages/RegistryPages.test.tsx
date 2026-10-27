@@ -141,6 +141,7 @@ describe('Phase 4 registry pages', () => {
     expect(await screen.findByText(/Status changed/)).toBeInTheDocument()
     const historyLabel = screen.getAllByText('Record status').find((element) => element.tagName === 'SPAN')!
     expect(historyLabel.closest('li')).toHaveTextContent('Record status: Active → Cancelled')
+    expect(screen.getByLabelText('New status').querySelector('option[value="cancelled"]')).toHaveTextContent('Cancelled')
     expect(screen.getByText('Synthetic cancellation recorded after review')).toBeInTheDocument()
     expect(screen.queryByText('SECRET-ID')).not.toBeInTheDocument()
     expect(screen.queryByText('internal institution → internal institution')).not.toBeInTheDocument()
