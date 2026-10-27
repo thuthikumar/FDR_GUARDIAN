@@ -10,12 +10,14 @@ All demo accounts and records are synthetic. The application has no access to AI
 | --- | --- |
 | `system_admin` | `user.manage`, `audit.read`, `institution.read`, `institution.write`, `fdr.read`, `alert.read`, `alert.manage`, `monitoring.run`, `monitoring.configure`, `case.read`, `report.read`, `integration.manage` |
 | `institution_admin` | `institution.read`, `fdr.read`, `fdr.write`, `document.upload`, `document.read`, `case.read`, `alert.read`, `report.read` |
-| `verification_officer` | `institution.read`, `fdr.read`, `document.read`, `extraction.review`, `case.read`, `case.review`, `alert.read`, `alert.manage`, `report.read` |
+| `verification_officer` | `institution.read`, `fdr.read`, `document.read`, `document.reprocess`, `extraction.review`, `case.read`, `case.review`, `alert.read`, `alert.manage`, `report.read` |
 | `accounts_officer` | `institution.read`, `fdr.read`, `case.read`, `case.financial_review`, `release.record`, `alert.read`, `report.read`, `report.export` |
 | `final_approver` | `institution.read`, `fdr.read`, `document.read`, `case.read`, `case.approve`, `alert.read`, `report.read` |
 | `read_only_auditor` | `institution.read`, `fdr.read`, `document.read`, `case.read`, `alert.read`, `audit.read`, `report.read`, `report.export` |
 
 `read_only_auditor` has no write permission. `institution.write` is granted only to `system_admin`; it enables institution registry management in Phase 4. `alert.manage` is granted to Verification Officers and System Administrators. `monitoring.run` and `monitoring.configure` are restricted to System Administrators. These permissions are enforced by FastAPI dependencies; React route guards only improve the user experience. Phase 3 implements a protected `/api/v1/admin/users` surface and auth routes. The Phase 5 dashboard and read-only report endpoints reuse `report.read`; CSV exports additionally require `report.export`, held by Accounts Officers and Read-only Auditors. These report endpoints never modify FDR, case, or alert rows.
+
+Phase 7 adds private document APIs. `document.upload` remains institution-administrator-only and is scoped to the user's institution. `document.read` is granted to Institution Administrators, Verification Officers, Final Approvers, and Read-only Auditors. `document.reprocess` is granted only to Verification Officers. System Administrators do not receive document access. Reprocessing is a machine extraction action and refuses any document with reviewer-confirmed values.
 
 ## Token and cookie design
 
