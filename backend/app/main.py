@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
 from app.api.auth import router as auth_router
 from app.api.admin import router as admin_router
+from app.api.institutions import router as institutions_router
+from app.api.fdrs import router as fdrs_router
 from app.core.config import frontend_origin, validate_security_settings
 
 validate_security_settings()
@@ -29,6 +31,8 @@ app.add_middleware(
 app.include_router(router)
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(admin_router, prefix="/api/v1")
+app.include_router(institutions_router, prefix="/api/v1")
+app.include_router(fdrs_router, prefix="/api/v1")
 
 
 @app.middleware("http")

@@ -8,14 +8,14 @@ All demo accounts and records are synthetic. The application has no access to AI
 
 | Role | Permissions |
 | --- | --- |
-| `system_admin` | `user.manage`, `audit.read`, `institution.read`, `fdr.read`, `alert.read`, `case.read`, `report.read`, `integration.manage` |
+| `system_admin` | `user.manage`, `audit.read`, `institution.read`, `institution.write`, `fdr.read`, `alert.read`, `case.read`, `report.read`, `integration.manage` |
 | `institution_admin` | `institution.read`, `fdr.read`, `fdr.write`, `document.upload`, `document.read`, `case.read`, `alert.read`, `report.read` |
 | `verification_officer` | `institution.read`, `fdr.read`, `document.read`, `extraction.review`, `case.read`, `case.review`, `alert.read`, `alert.manage`, `report.read` |
 | `accounts_officer` | `institution.read`, `fdr.read`, `case.read`, `case.financial_review`, `release.record`, `alert.read`, `report.read`, `report.export` |
 | `final_approver` | `institution.read`, `fdr.read`, `document.read`, `case.read`, `case.approve`, `alert.read`, `report.read` |
 | `read_only_auditor` | `institution.read`, `fdr.read`, `document.read`, `case.read`, `alert.read`, `audit.read`, `report.read`, `report.export` |
 
-`read_only_auditor` has no write permission. These permissions are enforced by FastAPI dependencies; React route guards only improve the user experience. Phase 3 implements a protected `/api/v1/admin/users` surface and auth routes. FDR, document, workflow, alert, and report CRUD endpoints remain out of scope for this phase.
+`read_only_auditor` has no write permission. `institution.write` is granted only to `system_admin`; it enables institution registry management in Phase 4. These permissions are enforced by FastAPI dependencies; React route guards only improve the user experience. Phase 3 implements a protected `/api/v1/admin/users` surface and auth routes. FDR, document, workflow, alert, and report CRUD endpoints remain out of scope for Phase 3.
 
 ## Token and cookie design
 

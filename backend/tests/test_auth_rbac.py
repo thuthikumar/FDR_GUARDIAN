@@ -238,7 +238,7 @@ def test_me_rejects_missing_tampered_and_expired_access_tokens(api_client, autho
 
 
 _expected_matrix = {
-    "system_admin": {"user.manage", "audit.read", "institution.read", "fdr.read", "alert.read", "case.read", "report.read", "integration.manage"},
+    "system_admin": {"user.manage", "audit.read", "institution.read", "institution.write", "fdr.read", "alert.read", "case.read", "report.read", "integration.manage"},
     "institution_admin": {"institution.read", "fdr.read", "fdr.write", "document.upload", "document.read", "case.read", "alert.read", "report.read"},
     "verification_officer": {"institution.read", "fdr.read", "document.read", "extraction.review", "case.read", "case.review", "alert.read", "alert.manage", "report.read"},
     "accounts_officer": {"institution.read", "fdr.read", "case.read", "case.financial_review", "release.record", "alert.read", "report.read", "report.export"},
@@ -257,7 +257,7 @@ def test_read_only_auditor_has_no_write_permissions() -> None:
     assert not auditor_permissions & {
         Permission.USER_MANAGE, Permission.FDR_WRITE, Permission.DOCUMENT_UPLOAD, Permission.EXTRACTION_REVIEW,
         Permission.CASE_REVIEW, Permission.CASE_FINANCIAL_REVIEW, Permission.CASE_APPROVE,
-        Permission.RELEASE_RECORD, Permission.ALERT_MANAGE, Permission.INTEGRATION_MANAGE,
+        Permission.RELEASE_RECORD, Permission.ALERT_MANAGE, Permission.INTEGRATION_MANAGE, Permission.INSTITUTION_WRITE,
     }
 
 
