@@ -8,12 +8,13 @@ import ReportsPage from './ReportsPage'
 const user = { id: 'u', email: 'auditor@synthetic.invalid', full_name: 'Synthetic Auditor', role: 'read_only_auditor', institution_id: null, permissions: ['report.read', 'report.export'] }
 const summary = { total_institutions: 2, total_fdr_records: 18, active_records: 12, upcoming_maturities: 4, overdue_date_review: 1, pending_verification_cases: 3, unresolved_alerts: 2 }
 const charts = { records_by_status: [{label:'active',count:12}], maturities_by_month: [], institution_distribution: [], cases_by_status: [] }
+const monitor = { counts_by_status:{open:2,acknowledged:1},upcoming_maturities_by_band:{maturity_urgent:1,maturity_attention_required:1,maturity_upcoming:2,maturity_overdue_date_review:1,maturity_normal:5} }
 function response(body: unknown, status = 200) { return { ok: status >= 200 && status < 300, status, json: async () => body, blob: async () => new Blob(['csv']) } as Response }
 function bootstrap(url: string) { if(url.endsWith('/auth/refresh')) return response({access_token:'test-token'}); if(url.endsWith('/auth/me')) return response(user); return null }
 
 describe('Phase 5 dashboard and reports', () => {
   it('renders dashboard cards from API data and chart empty states', async () => {
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo|URL) => { const url=String(input), initial=bootstrap(url); if(initial) return initial; if(url.endsWith('/dashboard/summary')) return response(summary); if(url.endsWith('/dashboard/charts')) return response(charts); return response({detail:'Unexpected'},500) }))
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo|URL) => { const url=String(input), initial=bootstrap(url); if(initial) return initial; if(url.endsWith('/dashboard/summary')) return response(summary); if(url.endsWith('/dashboard/charts')) return response(charts); if(url.endsWith('/monitoring/summary')) return response(monitor); return response({detail:'Unexpected'},500) }))
     render(<MemoryRouter><AuthProvider><DashboardPage/></AuthProvider></MemoryRouter>)
     expect(await screen.findByText('18')).toBeInTheDocument()
     expect(screen.getByText('Synthetic demo data. Dashboard values reflect records currently present; alert and verification-case generation is not performed here.')).toBeInTheDocument()
@@ -21,7 +22,7 @@ describe('Phase 5 dashboard and reports', () => {
   })
 
   it('shows a chart error when chart API fails', async () => {
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo|URL) => { const url=String(input), initial=bootstrap(url); if(initial) return initial; if(url.endsWith('/dashboard/summary')) return response(summary); if(url.endsWith('/dashboard/charts')) return response({detail:'failure'},500); return response({},500) }))
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo|URL) => { const url=String(input), initial=bootstrap(url); if(initial) return initial; if(url.endsWith('/dashboard/summary')) return response(summary); if(url.endsWith('/dashboard/charts')) return response({detail:'failure'},500); if(url.endsWith('/monitoring/summary')) return response(monitor); return response({},500) }))
     render(<MemoryRouter><AuthProvider><DashboardPage/></AuthProvider></MemoryRouter>)
     expect(await screen.findAllByText('Chart data could not be loaded.')).toHaveLength(4)
   })
