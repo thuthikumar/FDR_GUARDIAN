@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { AuthProvider } from '../auth/AuthContext'
 import { SourceBadges } from '../components/RegistryPrimitives'
-import { formatHistoryAction, formatHistoryChanges, formatInr } from '../lib/registry'
+import { formatHistoryAction, formatHistoryChanges, formatInr, formatRecordStatusLabel } from '../lib/registry'
 import FdrFormPage from './FdrFormPage'
 import FdrDetailPage from './FdrDetailPage'
 import FdrsPage from './FdrsPage'
@@ -92,7 +92,7 @@ describe('Phase 4 registry pages', () => {
 
   it('humanises and formats only business fields in history', () => {
     const item = {
-      id: 'history-id', action: 'fdr_created', actor_name: 'Synthetic Tester', timestamp: '2026-01-01T00:00:00Z', remarks: null,
+      action: 'fdr_created', actor_name: 'Synthetic Tester', timestamp: '2026-01-01T00:00:00Z', remarks: null,
       changed_fields: {
         internal_fdr_id: { old: null, new: 'INT-001' }, institution_id: { old: null, new: 'institution-id' },
         source_system: { old: null, new: 'MANUAL_ENTRY' }, verification_status: { old: null, new: 'not_submitted' },
@@ -112,13 +112,17 @@ describe('Phase 4 registry pages', () => {
       { field: 'Currency', oldValue: '—', newValue: 'INR' },
       { field: 'Issue date', oldValue: '—', newValue: '01 Jan 2025' },
       { field: 'Maturity date', oldValue: '—', newValue: '01 Jan 2027' },
-      { field: 'Record status', oldValue: '—', newValue: 'draft' },
+      { field: 'Record status', oldValue: '—', newValue: 'Draft' },
     ])
+  })
+
+  it('capitalises record status labels consistently', () => {
+    expect(['draft', 'active', 'cancelled'].map(formatRecordStatusLabel)).toEqual(['Draft', 'Active', 'Cancelled'])
   })
 
   it('shows a humanised status change and its remarks in the history timeline', async () => {
     const changed = {
-      id: 'status-event', action: 'fdr_status_changed', actor_name: 'Synthetic Institution Admin', timestamp: '2026-01-01T00:00:00Z',
+      action: 'fdr_status_changed', actor_name: 'Synthetic Institution Admin', timestamp: '2026-01-01T00:00:00Z',
       changed_fields: {
         record_status: { old: 'active', new: 'cancelled' }, internal_fdr_id: { old: 'SECRET-ID', new: 'SECRET-ID' },
         institution_id: { old: 'internal-institution', new: 'internal-institution' },
@@ -136,7 +140,7 @@ describe('Phase 4 registry pages', () => {
     render(<MemoryRouter initialEntries={['/fdrs/changed']}><AuthProvider><Routes><Route path="/fdrs/:recordId" element={<FdrDetailPage />} /></Routes></AuthProvider></MemoryRouter>)
     expect(await screen.findByText(/Status changed/)).toBeInTheDocument()
     const historyLabel = screen.getAllByText('Record status').find((element) => element.tagName === 'SPAN')!
-    expect(historyLabel.closest('li')).toHaveTextContent('Record status: active → cancelled')
+    expect(historyLabel.closest('li')).toHaveTextContent('Record status: Active → Cancelled')
     expect(screen.getByText('Synthetic cancellation recorded after review')).toBeInTheDocument()
     expect(screen.queryByText('SECRET-ID')).not.toBeInTheDocument()
     expect(screen.queryByText('internal institution → internal institution')).not.toBeInTheDocument()

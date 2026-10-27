@@ -308,7 +308,6 @@ def get_fdr_history(
             and (event.action != "fdr_created" or change.get("new") not in (None, ""))
         }
         history.append(FDRHistoryItem(
-            id=event.id,
             action=event.action,
             actor_name=actor_name or "System",
             timestamp=event.timestamp,

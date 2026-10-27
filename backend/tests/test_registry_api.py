@@ -280,6 +280,7 @@ def test_fdr_history_creation_returns_business_fields_only(api_client, db_sessio
 
     history = api_client.get(f"/api/v1/fdrs/{created.json()['id']}/history", headers=headers)
     assert history.status_code == 200
+    assert set(history.json()[0]) == {"action", "actor_name", "timestamp", "changed_fields", "remarks"}
     changed_fields = history.json()[0]["changed_fields"]
     assert set(changed_fields) == {"bank_name", "fdr_number", "amount", "currency", "issue_date", "maturity_date", "record_status"}
     assert changed_fields["bank_name"]["new"] == "Synthetic New Bank"

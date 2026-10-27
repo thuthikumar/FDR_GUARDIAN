@@ -5,7 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { PageHeading, SourceBadges, StateMessage, StatusBadge } from '../components/RegistryPrimitives'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
-import { formatDate, formatInr, formatHistoryAction, formatHistoryChanges, responseError, type FdrHistoryItem, type FdrRecord } from '../lib/registry'
+import { formatDate, formatInr, formatHistoryAction, formatHistoryChanges, formatRecordStatusLabel, responseError, type FdrHistoryItem, type FdrRecord } from '../lib/registry'
 
 const transitions: Record<string, string[]> = {
   draft: ['active', 'cancelled'], active: ['matured', 'cancelled'], matured: ['released'], released: [], cancelled: [],
@@ -85,7 +85,7 @@ export default function FdrDetailPage() {
         </CardContent></Card>
         <Card><CardHeader><CardTitle className="text-base">Change history</CardTitle></CardHeader><CardContent>
           {history.length === 0 ? <p className="text-sm text-slate-500">No changes have been recorded yet.</p> : <ol className="space-y-5 border-l border-slate-200 pl-5">
-            {history.map((item) => <li key={item.id} className="relative"><span className="absolute -left-[1.6rem] top-1 size-2.5 rounded-full bg-blue-700" />
+            {history.map((item, index) => <li key={`${index}-${item.timestamp}`} className="relative"><span className="absolute -left-[1.6rem] top-1 size-2.5 rounded-full bg-blue-700" />
               <p className="text-sm font-semibold">{formatHistoryAction(item.action)} <span className="font-normal text-slate-500">by {item.actor_name}</span></p>
               <time className="text-xs text-slate-500" dateTime={item.timestamp}>{new Date(item.timestamp).toLocaleString('en-IN')}</time>
               <ul className="mt-2 space-y-1 text-sm text-slate-700">{formatHistoryChanges(item).map(({ field, oldValue, newValue }) => <li key={field}><span>{field}</span>: {oldValue} → {newValue}</li>)}</ul>
@@ -96,7 +96,7 @@ export default function FdrDetailPage() {
       </div>
       {user?.permissions.includes('fdr.write') && <Card className="h-fit"><CardHeader><CardTitle className="text-base">Change record status</CardTitle></CardHeader><CardContent>
         {allowedNext.length ? <form className="space-y-4" onSubmit={changeStatus}>
-          <div className="space-y-1.5"><label htmlFor="next-status" className="text-sm font-medium">New status</label><select id="next-status" required value={statusChoice} onChange={(event) => setStatusChoice(event.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"><option value="">Choose a status</option>{allowedNext.map((value) => <option key={value} value={value}>{value.replaceAll('_', ' ')}</option>)}</select></div>
+          <div className="space-y-1.5"><label htmlFor="next-status" className="text-sm font-medium">New status</label><select id="next-status" required value={statusChoice} onChange={(event) => setStatusChoice(event.target.value)} className="h-9 w-full rounded-lg border border-input bg-background px-3 text-sm"><option value="">Choose a status</option>{allowedNext.map((value) => <option key={value} value={value}>{formatRecordStatusLabel(value)}</option>)}</select></div>
           <div className="space-y-1.5"><label htmlFor="status-remarks" className="text-sm font-medium">Remarks</label><textarea id="status-remarks" required minLength={1} maxLength={1000} value={remarks} onChange={(event) => setRemarks(event.target.value)} rows={4} className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus-visible:outline-2 focus-visible:outline-ring" /></div>
           {statusError && <p role="alert" className="text-sm text-rose-700">{statusError}</p>}
           <Button type="submit" disabled={savingStatus || !remarks.trim()}>{savingStatus ? 'Saving…' : 'Save status'}</Button>

@@ -118,7 +118,6 @@ class FDRPage(BaseModel):
 
 
 class FDRHistoryItem(BaseModel):
-    id: UUID
     action: str
     actor_name: str
     timestamp: datetime

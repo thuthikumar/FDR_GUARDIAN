@@ -42,12 +42,15 @@ export type FdrRecord = {
 }
 
 export type FdrHistoryItem = {
-  id: string
   action: string
   actor_name: string
   timestamp: string
   changed_fields: Record<string, { old: unknown; new: unknown }>
   remarks: string | null
+}
+
+export function formatRecordStatusLabel(status: string): string {
+  return status.replaceAll('_', ' ').replace(/\b\w/g, (character) => character.toUpperCase())
 }
 
 const historyFieldLabels: Record<string, string> = {
@@ -72,7 +75,7 @@ export function formatHistoryChanges(item: FdrHistoryItem): Array<{ field: strin
       if (value === null || value === undefined || value === '') return '—'
       if (key === 'amount') return formatInr(String(value), 'INR')
       if (key === 'issue_date' || key === 'maturity_date') return formatDate(String(value))
-      if (key === 'record_status' && typeof value === 'string') return value.replaceAll('_', ' ')
+      if (key === 'record_status' && typeof value === 'string') return formatRecordStatusLabel(value)
       return String(value)
     }
     return [{ field: label, oldValue: formatValue(change.old), newValue: formatValue(change.new) }]
