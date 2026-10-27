@@ -14,6 +14,7 @@ export default function ReportsPage() {
   const { apiFetch, user } = useAuth()
   const [summary, setSummary] = useState<Page<InstitutionRow> | null>(null)
   const [maturities, setMaturities] = useState<Page<MaturityRow> | null>(null)
+  const [institutionPage, setInstitutionPage] = useState(1)
   const [page, setPage] = useState(1)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -29,13 +30,13 @@ export default function ReportsPage() {
     if (from) params.set('maturity_from', from)
     if (to) params.set('maturity_to', to)
     if (bucket) params.set('bucket', bucket)
-    void Promise.all([apiFetch('/api/v1/reports/institution-summary?page=1&page_size=10'), apiFetch(`/api/v1/reports/maturities?${params}`)])
+    void Promise.all([apiFetch(`/api/v1/reports/institution-summary?page=${institutionPage}&page_size=10`), apiFetch(`/api/v1/reports/maturities?${params}`)])
       .then(async ([a,b]) => { if (!a.ok) throw new Error(await responseError(a)); if (!b.ok) throw new Error(await responseError(b)); return Promise.all([a.json() as Promise<Page<InstitutionRow>>, b.json() as Promise<Page<MaturityRow>>]) })
       .then(([a,b]) => { if(active){setSummary(a);setMaturities(b)} })
       .catch((reason: unknown) => { if(active) setError(reason instanceof Error ? reason.message : 'Reports could not be loaded.') })
       .finally(() => { if(active) setLoading(false) })
     return () => { active = false }
-  }, [apiFetch, page, from, to, bucket])
+  }, [apiFetch, institutionPage, page, from, to, bucket])
   async function exportCsv(report: 'institution-summary'|'maturities') {
     setExporting(true)
     try {
@@ -51,6 +52,7 @@ export default function ReportsPage() {
     {error && <StateMessage kind="error">{error}</StateMessage>}
     <Card><CardHeader><div className="flex items-center justify-between gap-3"><CardTitle>Institution summary</CardTitle>{canExport && <Button variant="outline" disabled={exporting} onClick={() => void exportCsv('institution-summary')}>Export CSV</Button>}</div></CardHeader><CardContent>
       {loading ? <p role="status">Loading institution summary…</p> : !summary?.items.length ? <p>No institution summary data.</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th className="p-2">Institution</th><th className="p-2">Total FDRs</th><th className="p-2">Active</th><th className="p-2">Total principal</th><th className="p-2">Nearest maturity</th></tr></thead><tbody>{summary.items.map((r)=><tr key={r.institution_id} className="border-t"><td className="p-2">{r.institution_name}</td><td className="p-2">{r.total_fdrs}</td><td className="p-2">{r.active_fdrs}</td><td className="p-2">{formatInr(r.total_principal)}</td><td className="p-2">{formatDate(r.nearest_upcoming_maturity)}</td></tr>)}</tbody></table></div>}
+      {summary && <Pager page={summary.page} pageSize={summary.page_size} total={summary.total} onPageChange={setInstitutionPage}/>}
     </CardContent></Card>
     <Card><CardHeader><div className="flex items-center justify-between gap-3"><CardTitle>Maturity report</CardTitle>{canExport && <Button variant="outline" disabled={exporting} onClick={() => void exportCsv('maturities')}>Export CSV</Button>}</div></CardHeader><CardContent>
       <div className="mb-4 grid gap-3 sm:grid-cols-4"><label className="text-xs">Maturity from<Input aria-label="Maturity from" type="date" value={from} onChange={(e)=>{setFrom(e.target.value);setPage(1)}}/></label><label className="text-xs">Maturity to<Input aria-label="Maturity to" type="date" value={to} onChange={(e)=>{setTo(e.target.value);setPage(1)}}/></label><label className="text-xs">Bucket<select aria-label="Maturity bucket" value={bucket} onChange={(e)=>{setBucket(e.target.value);setPage(1)}} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">All buckets</option>{['urgent','attention','upcoming','normal','overdue-date review'].map(v=><option key={v}>{v}</option>)}</select></label></div>

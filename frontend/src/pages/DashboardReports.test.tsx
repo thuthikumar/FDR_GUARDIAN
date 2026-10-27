@@ -40,7 +40,7 @@ describe('Phase 5 dashboard and reports', () => {
     const click = vi.spyOn(HTMLAnchorElement.prototype,'click').mockImplementation(()=>undefined)
     render(<MemoryRouter><AuthProvider><Routes><Route path="/" element={<ReportsPage/>}/></Routes></AuthProvider></MemoryRouter>)
     expect(await screen.findByText('Page 1 of 3')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button',{name:'Next'}))
+    fireEvent.click(screen.getAllByRole('button',{name:'Next'}).find((button) => !button.hasAttribute('disabled'))!)
     await waitFor(()=>expect(fetchMock.mock.calls.some(([input])=>String(input).includes('reports/maturities?page=2'))).toBe(true))
     fireEvent.click(screen.getAllByRole('button',{name:'Export CSV'})[1])
     await waitFor(()=>expect(fetchMock.mock.calls.some(([input,init])=>String(input).includes('format=csv') && new Headers(init?.headers).get('Authorization')==='Bearer test-token')).toBe(true))
