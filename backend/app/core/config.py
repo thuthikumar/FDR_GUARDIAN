@@ -1,6 +1,7 @@
 """Environment-backed configuration."""
 
 import os
+import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -109,6 +110,67 @@ def monitoring_run_time() -> tuple[int, int]:
     if not 0 <= hour <= 23 or not 0 <= minute <= 59:
         raise RuntimeError("MONITORING_RUN_HOUR must be 0-23 and MONITORING_RUN_MINUTE 0-59")
     return hour, minute
+
+
+def storage_root() -> Path:
+    configured = os.getenv("STORAGE_ROOT", "").strip()
+    return Path(configured).expanduser().resolve() if configured else (Path(__file__).resolve().parents[2] / "storage").resolve()
+
+
+def validate_storage_root() -> Path:
+    """Create private storage at startup and fail clearly when it is not writable."""
+    root = storage_root()
+    try:
+        root.mkdir(parents=True, exist_ok=True)
+        descriptor, probe_name = tempfile.mkstemp(prefix=".write-check-", dir=root)
+        os.close(descriptor)
+        Path(probe_name).unlink(missing_ok=True)
+        try:
+            root.chmod(0o700)
+        except OSError:
+            pass
+    except OSError as exc:
+        raise RuntimeError("STORAGE_ROOT must be a directory the application can create and write") from exc
+    return root
+
+
+def max_upload_bytes() -> int:
+    return _positive_int("MAX_UPLOAD_MB", 10) * 1024 * 1024
+
+
+def max_pdf_pages() -> int:
+    return _positive_int("MAX_PDF_PAGES", 10)
+
+
+def max_documents_per_fdr() -> int:
+    return _positive_int("MAX_DOCUMENTS_PER_FDR", 20)
+
+
+def ocr_enabled() -> bool:
+    raw = os.getenv("OCR_ENABLED", "true").strip().lower()
+    if raw not in {"true", "false"}:
+        raise RuntimeError("OCR_ENABLED must be true or false")
+    return raw == "true"
+
+
+def tesseract_command() -> str | None:
+    value = os.getenv("TESSERACT_CMD", "").strip()
+    return value or None
+
+
+def ocr_languages() -> str:
+    value = os.getenv("OCR_LANGUAGES", "eng").strip()
+    if not value or len(value) > 80 or any(ch not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_+-" for ch in value):
+        raise RuntimeError("OCR_LANGUAGES must be a valid language code list")
+    return value
+
+
+def ocr_timeout_seconds() -> int:
+    return _positive_int("OCR_TIMEOUT_SECONDS", 60)
+
+
+def processing_stale_minutes() -> int:
+    return _positive_int("PROCESSING_STALE_MINUTES", 15)
 
 
 def _positive_int(name: str, default: int) -> int:

@@ -57,16 +57,18 @@ class WorkflowStatus(StrEnum):
 
 class DocumentType(StrEnum):
     FDR_CERTIFICATE = "fdr_certificate"
-    BANK_CONFIRMATION = "bank_confirmation"
-    SUPPORTING_DOCUMENT = "supporting_document"
+    BANK_CONFIRMATION_LETTER = "bank_confirmation_letter"
+    INSTITUTION_REQUEST_LETTER = "institution_request_letter"
+    OTHER = "other"
 
 
 class ProcessingStatus(StrEnum):
-    PENDING = "pending"
+    UPLOADED = "uploaded"
     QUEUED = "queued"
     PROCESSING = "processing"
-    COMPLETED = "completed"
+    PROCESSED = "processed"
     FAILED = "failed"
+    OCR_UNAVAILABLE = "ocr_unavailable"
 
 
 class ReviewStatus(StrEnum):

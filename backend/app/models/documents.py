@@ -29,6 +29,8 @@ class Document(UUIDPrimaryKeyMixin, Base):
         enum_check("processing_status", ProcessingStatus),
         enum_check("review_status", ReviewStatus),
         CheckConstraint("file_size >= 0", name="file_size_nonnegative"),
+        CheckConstraint("processing_error_code IS NULL OR processing_error_code ~ '^[a-z0-9_]{1,40}$'", name="processing_error_code_safe"),
+        CheckConstraint("page_count IS NULL OR page_count >= 1", name="page_count_positive"),
         Index("ix_documents_fdr_record_id", "fdr_record_id"),
     )
 
@@ -45,6 +47,12 @@ class Document(UUIDPrimaryKeyMixin, Base):
     uploaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
     processing_status: Mapped[str] = mapped_column(String(24), nullable=False)
     review_status: Mapped[str] = mapped_column(String(24), nullable=False)
+    processing_error_code: Mapped[str | None] = mapped_column(String(40))
+    processing_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    page_count: Mapped[int | None] = mapped_column()
+    ocr_engine: Mapped[str | None] = mapped_column(String(120))
+    extraction_method: Mapped[str | None] = mapped_column(String(32))
 
 
 class ExtractedField(UUIDPrimaryKeyMixin, Base):
@@ -55,6 +63,8 @@ class ExtractedField(UUIDPrimaryKeyMixin, Base):
             "confidence_score IS NULL OR (confidence_score >= 0 AND confidence_score <= 1)",
             name="confidence_range",
         ),
+        CheckConstraint("extraction_method IN ('ocr', 'pdf_text_layer', 'synthetic_fixture')", name="extraction_method_valid"),
+        CheckConstraint("source_page IS NULL OR source_page >= 1", name="source_page_positive"),
         Index("ix_extracted_fields_document_id", "document_id"),
     )
 
@@ -63,6 +73,7 @@ class ExtractedField(UUIDPrimaryKeyMixin, Base):
     extracted_value: Mapped[str | None] = mapped_column(Text)
     confidence_score: Mapped[Decimal | None] = mapped_column(Numeric(4, 3))
     extraction_method: Mapped[str] = mapped_column(String(64), nullable=False)
+    source_page: Mapped[int | None] = mapped_column()
     reviewer_confirmed_value: Mapped[str | None] = mapped_column(Text)
     reviewed_by: Mapped[UUID | None] = mapped_column(ForeignKey("users.id", ondelete="RESTRICT"))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
