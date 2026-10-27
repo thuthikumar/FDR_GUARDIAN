@@ -2,7 +2,7 @@
 
 FDR Guardian is an administrative platform foundation for managing institution-wise Fixed Deposit Receipt (FDR) and security deposit lifecycles, including document verification, maturity monitoring, discrepancies, approvals, notifications, and audit history.
 
-The current milestone is **Phase 5: Dashboard, Search/Filtering and Reporting Foundations**. The project contains a React/TypeScript dashboard and registry UI, a FastAPI API, PostgreSQL schema managed with Alembic, backend-enforced permissions and institution scope, audited CSV reports, and clearly labelled synthetic development records. It does not connect to AICTE production systems or contain real institutional FDR records.
+The current milestone is **Phase 6: Maturity Monitoring and Alert Generation**. The project contains a React/TypeScript dashboard, registry, and Alert Centre; a FastAPI API; PostgreSQL schema managed with Alembic; backend-enforced permissions and institution scope; audited reports; and clearly labelled synthetic development records. It does not connect to AICTE production systems or contain real institutional FDR records.
 
 ## Prerequisites
 
@@ -134,7 +134,29 @@ Synthetic demo login emails (all use the local `SEED_DEV_PASSWORD`; this README 
 
 The permission mapping is a proposed application design and is not a verified AICTE role structure. Route guards in React are for user experience; all authentication and permissions are enforced by FastAPI. See [docs/phase-3-auth-rbac.md](docs/phase-3-auth-rbac.md) for the role matrix and authentication details, [docs/phase-4-fdr-management.md](docs/phase-4-fdr-management.md) for registry endpoints, validation, status transitions, and history, and [docs/phase-5-dashboard-reports.md](docs/phase-5-dashboard-reports.md) for dashboard metrics, report endpoints, maturity buckets, and CSV rules.
 
-The dashboard loads at `/` after login. The Phase 5 JSON endpoints are `GET /api/v1/dashboard/summary`, `GET /api/v1/dashboard/charts`, `GET /api/v1/reports/institution-summary`, and `GET /api/v1/reports/maturities`. Both reports accept `format=csv` for authorised exports. Dashboard and reports require `report.read`; exports also require `report.export`.
+The dashboard loads at `/` after login. Open **Alert Centre** in the navigation to filter and review alerts. System administrators can see the monitoring rules, run history, and **Run now** controls on the dashboard. Maturity thresholds are demo defaults, not verified AICTE policy. See [docs/phase-6-monitoring.md](docs/phase-6-monitoring.md) for lifecycle, APIs, and permissions.
+
+The Phase 5 JSON endpoints are `GET /api/v1/dashboard/summary`, `GET /api/v1/dashboard/charts`, `GET /api/v1/reports/institution-summary`, and `GET /api/v1/reports/maturities`. Both reports accept `format=csv` for authorised exports. Dashboard and reports require `report.read`; exports also require `report.export`.
+
+### Maturity monitoring
+
+Monitoring uses `APP_TIMEZONE` (default `Asia/Kolkata`) for the meaning of “today.” The optional in-process daily scheduler is disabled by default. Add these values to `.env` to enable and configure it:
+
+```dotenv
+APP_TIMEZONE=Asia/Kolkata
+SCHEDULER_ENABLED=true
+MONITORING_RUN_HOUR=2
+MONITORING_RUN_MINUTE=0
+```
+
+Restart the backend after changing scheduler settings. For a one-off run from `backend/`, use:
+
+```powershell
+python -m app.services.monitoring run
+python -m app.services.monitoring run --reference-date 2026-10-27
+```
+
+Every run is recorded in the database. The PostgreSQL advisory lock makes duplicate workers and development reload restarts skip a concurrent run safely. Keep `SCHEDULER_ENABLED=false` in tests.
 
 Health endpoints:
 
