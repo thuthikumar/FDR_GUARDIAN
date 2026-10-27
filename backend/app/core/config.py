@@ -3,6 +3,7 @@
 import os
 from pathlib import Path
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dotenv import load_dotenv
 from sqlalchemy.engine import URL, make_url
@@ -82,6 +83,32 @@ def maturity_thresholds() -> tuple[int, int, int]:
     if not (0 < urgent < attention < upcoming):
         raise RuntimeError("Maturity demo thresholds must satisfy 0 < urgent < attention < upcoming")
     return urgent, attention, upcoming
+
+
+def app_timezone() -> ZoneInfo:
+    name = os.getenv("APP_TIMEZONE", "Asia/Kolkata").strip()
+    try:
+        return ZoneInfo(name)
+    except ZoneInfoNotFoundError as exc:
+        raise RuntimeError("APP_TIMEZONE must be a valid IANA timezone") from exc
+
+
+def scheduler_enabled() -> bool:
+    raw = os.getenv("SCHEDULER_ENABLED", "false").strip().lower()
+    if raw not in {"true", "false"}:
+        raise RuntimeError("SCHEDULER_ENABLED must be true or false")
+    return raw == "true"
+
+
+def monitoring_run_time() -> tuple[int, int]:
+    try:
+        hour = int(os.getenv("MONITORING_RUN_HOUR", "2"))
+        minute = int(os.getenv("MONITORING_RUN_MINUTE", "0"))
+    except ValueError as exc:
+        raise RuntimeError("Monitoring run time must be numeric") from exc
+    if not 0 <= hour <= 23 or not 0 <= minute <= 59:
+        raise RuntimeError("MONITORING_RUN_HOUR must be 0-23 and MONITORING_RUN_MINUTE 0-59")
+    return hour, minute
 
 
 def _positive_int(name: str, default: int) -> int:

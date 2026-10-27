@@ -83,6 +83,7 @@ export default function FdrDetailPage() {
             <div className="sm:col-span-2"><dt className="mb-1 text-xs uppercase text-slate-500">Data source</dt><dd><SourceBadges sourceSystem={record.source_system} /></dd></div>
           </dl>
         </CardContent></Card>
+        <ActiveAlerts recordId={record.id} />
         <Card><CardHeader><CardTitle className="text-base">Change history</CardTitle></CardHeader><CardContent>
           {history.length === 0 ? <p className="text-sm text-slate-500">No changes have been recorded yet.</p> : <ol className="space-y-5 border-l border-slate-200 pl-5">
             {history.map((item, index) => <li key={`${index}-${item.timestamp}`} className="relative"><span className="absolute -left-[1.6rem] top-1 size-2.5 rounded-full bg-blue-700" />
@@ -108,4 +109,22 @@ export default function FdrDetailPage() {
 
 function Detail({ label, value }: { label: string; value: string }) {
   return <div><dt className="text-xs uppercase text-slate-500">{label}</dt><dd className="mt-1 break-words text-sm font-medium">{value}</dd></div>
+}
+
+function ActiveAlerts({ recordId }: { recordId: string }) {
+  const { apiFetch } = useAuth()
+  const [items, setItems] = useState<Array<{id:string;alert_type:string;severity:string;status:string;explanation:string}>>([])
+  const [state, setState] = useState<'loading'|'ready'|'error'>('loading')
+  useEffect(() => {
+    let active=true
+    void apiFetch(`/api/v1/alerts?fdr_id=${recordId}&status=unresolved&page_size=100`).then(async (response)=>{
+      if(!response.ok)throw new Error('Unable to load active alerts')
+      const body=await response.json() as {items:Array<{id:string;alert_type:string;severity:string;status:string;explanation:string}>}
+      if(active)setItems(body.items)
+    }).then(()=>{if(active)setState('ready')}).catch(()=>{if(active)setState('error')})
+    return()=>{active=false}
+  },[apiFetch,recordId])
+  return <Card><CardHeader><CardTitle className="text-base">Active alerts</CardTitle></CardHeader><CardContent>
+    {state==='loading'?<p role="status" className="text-sm text-slate-500">Loading active alerts…</p>:state==='error'?<p role="alert" className="text-sm text-rose-700">Active alerts could not be loaded.</p>:items.length===0?<p className="text-sm text-slate-500">No active alerts for this record.</p>:<ul className="space-y-3">{items.map((item)=><li key={item.id} className="rounded-lg border p-3"><p className="text-sm font-semibold capitalize">{item.alert_type.replaceAll('_',' ')} · {item.severity} · {item.status}</p><p className="mt-1 text-sm text-slate-700">{item.explanation}</p></li>)}</ul>}
+  </CardContent></Card>
 }

@@ -19,6 +19,7 @@ os.environ["APP_ENV"] = "test"
 os.environ["JWT_SECRET_KEY"] = "test-only-signing-key-not-for-use-outside-tests"
 os.environ["COOKIE_SECURE"] = "false"
 os.environ["FRONTEND_ORIGIN"] = "http://127.0.0.1:5173"
+os.environ["SCHEDULER_ENABLED"] = "false"
 
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
@@ -80,9 +81,32 @@ def migrated_test_database() -> Generator[URL, None, None]:
         if quoted:
             with engine.begin() as connection:
                 connection.exec_driver_sql(f"TRUNCATE TABLE {quoted} RESTART IDENTITY CASCADE")
+        from sqlalchemy.orm import Session
+        from app.services.monitoring import ensure_default_maturity_rules
+        with Session(engine) as session:
+            ensure_default_maturity_rules(session)
+            session.commit()
         yield url
     finally:
         engine.dispose()
+
+
+@pytest.fixture(autouse=True)
+def clean_test_data(db_engine):
+    """Keep tests isolated even when an API handler commits its session."""
+    from app.db.base import Base
+    import app.models  # noqa: F401
+
+    table_names = [table.name for table in Base.metadata.sorted_tables]
+    quoted = ", ".join(db_engine.dialect.identifier_preparer.quote(name) for name in table_names)
+    with db_engine.begin() as connection:
+        if quoted:
+            connection.exec_driver_sql(f"TRUNCATE TABLE {quoted} RESTART IDENTITY CASCADE")
+    from sqlalchemy.orm import Session
+    from app.services.monitoring import ensure_default_maturity_rules
+    with Session(db_engine) as session:
+        ensure_default_maturity_rules(session)
+        session.commit()
 
 
 @pytest.fixture

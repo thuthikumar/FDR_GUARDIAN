@@ -21,9 +21,12 @@ class InstitutionStatus(StrEnum):
 class FDRRecordStatus(StrEnum):
     DRAFT = "draft"
     ACTIVE = "active"
+    UNDER_VERIFICATION = "under_verification"
+    DISCREPANCY = "discrepancy"
     MATURED = "matured"
     RELEASED = "released"
     CANCELLED = "cancelled"
+    CLOSED = "closed"
 
 
 class VerificationStatus(StrEnum):

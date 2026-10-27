@@ -11,6 +11,7 @@ import FdrsPage from './pages/FdrsPage'
 import LoginPage from './pages/LoginPage'
 import DashboardPage from './pages/DashboardPage'
 import ReportsPage from './pages/ReportsPage'
+import AlertsPage from './pages/AlertsPage'
 
 export default function App() {
   return (
@@ -23,6 +24,7 @@ export default function App() {
               <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="reports" element={<ReportsPage />} />
+              <Route path="alerts" element={<AlertsPage />} />
               <Route path="institutions" element={<InstitutionsPage />} />
               <Route path="institutions/new" element={<InstitutionFormPage />} />
               <Route path="institutions/:institutionId" element={<InstitutionDetailPage />} />

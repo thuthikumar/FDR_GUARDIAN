@@ -15,6 +15,7 @@ export default function AppShell() {
     { label: 'Institutions', to: '/institutions', permission: 'institution.read' },
     { label: 'FDR Registry', to: '/fdrs', permission: 'fdr.read' },
     { label: 'Reports', to: '/reports', permission: 'report.read' },
+    { label: 'Alert Centre', to: '/alerts', permission: 'alert.read' },
   ].filter((link) => user.permissions.includes(link.permission))
 
   async function handleLogout() {
