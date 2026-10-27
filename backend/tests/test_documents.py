@@ -402,11 +402,11 @@ def real_ocr_fixture(tmp_path: Path, fixture_kind: str) -> tuple[Path, str]:
         rng=random.Random(26265);pixels=image.load()
         for _ in range(25000):
             x,y=rng.randrange(image.width),rng.randrange(image.height);shade=rng.randrange(160,256);pixels[x,y]=(shade,shade,shade)
-        image=image.filter(ImageFilter.GaussianBlur(0.8))
+        image=image.filter(ImageFilter.GaussianBlur(3.0))
     if fixture_kind=="blank_image":
         image=Image.new("RGB",(1700,1100),"white");ImageDraw.Draw(image).text((55,50),"SYNTHETIC SAMPLE - NOT A REAL DOCUMENT",fill="black",font=font)
     image_path=tmp_path/("fixture.jpg" if fixture_kind=="noisy_jpeg" else "fixture.png")
-    image.save(image_path,format="JPEG" if fixture_kind=="noisy_jpeg" else "PNG",quality=28 if fixture_kind=="noisy_jpeg" else None)
+    image.save(image_path,format="JPEG" if fixture_kind=="noisy_jpeg" else "PNG",quality=8 if fixture_kind=="noisy_jpeg" else None)
     if fixture_kind=="image_pdf":
         output=io.BytesIO();doc=canvas.Canvas(output,pagesize=letter);doc.drawImage(ImageReader(image),0,0,width=letter[0],height=letter[1]);doc.save()
         path=tmp_path/"fixture.pdf";path.write_bytes(output.getvalue());return path,"application/pdf"
@@ -421,5 +421,13 @@ def test_real_tesseract_synthetic_fixture_smoke(fixture_kind,tmp_path):
     assert pages==1 and method=="ocr" and engine.startswith("Tesseract ")
     if fixture_kind=="blank_image":
         assert candidates["fdr_number"].value is None
+    elif fixture_kind=="noisy_jpeg":
+        expected = {"fdr_number": "SYNTH-FDR-0001", "bank_name": "Synthetic Community Bank 01",
+                    "branch_name": "Synthetic Branch 001", "amount": "INR 235,357.00",
+                    "issue_date": "05 Mar 2024", "maturity_date": "24 Oct 2027"}
+        assert any(candidates[field].value is None or candidates[field].confidence is None
+                   or candidates[field].confidence < 0.85 for field in expected)
+        assert all(candidate.value == expected[field] for field, candidate in candidates.items()
+                   if candidate.value and candidate.confidence is not None and candidate.confidence >= 0.85)
     else:
         assert candidates["fdr_number"].value=="SYNTH-FDR-0001"

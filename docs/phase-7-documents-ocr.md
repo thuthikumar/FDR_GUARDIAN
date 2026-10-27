@@ -47,7 +47,7 @@ Client filenames are sanitized for display only and never form a filesystem path
 | `OCR_TIMEOUT_SECONDS` | `60` | Timeout passed to Tesseract calls |
 | `PROCESSING_STALE_MINUTES` | `15` | Age used for stale-processing startup count |
 
-Tesseract was not installed in the development environment when this phase was evaluated. On Windows install it with `winget install --id UB-Mannheim.TesseractOCR -e`. PaddleOCR is deferred: it adds a much larger Windows runtime and model-install footprint, and the lighter Tesseract path is evaluated first. `pytesseract` is only a Python bridge and does not bundle the Tesseract executable.
+Tesseract is installed in the evaluated Windows environment at `C:\Program Files\Tesseract-OCR\tesseract.exe` (Tesseract 5.4.0.20240606; available languages `eng` and `osd`). Backend configuration now loads `backend/.env` before the repository-level `.env`, while existing process environment values retain precedence. On Windows install Tesseract with `winget install --id UB-Mannheim.TesseractOCR -e`. PaddleOCR is deferred: it adds a much larger Windows runtime and model-install footprint, and the lighter Tesseract path is evaluated first. `pytesseract` is only a Python bridge and does not bundle the Tesseract executable.
 
 ## Processing lifecycle and recovery
 
@@ -79,17 +79,17 @@ The extraction API compares machine-extracted text with stored FDR values using 
 
 From `backend/`, run `python -m scripts.generate_ocr_fixtures` and `python -m scripts.evaluate_ocr_fixtures`. Files are generated in gitignored private storage and not committed. They use fictional institutions/banks and seeded synthetic FDR values only. This evaluation says nothing about OCR accuracy on real bank documents.
 
-Observed in this environment (`pypdfium2 5.14.0`; Tesseract unavailable):
+Observed after regenerating fixtures in this environment (`pypdfium2 5.14.0`; Tesseract 5.4.0.20240606). Confidence values below are Tesseract word-data averages; they are recognition scores, not probabilities. `NULL` means the method has no OCR word confidence or no candidate was extracted.
 
-| Fixture | Method/result | Extracted fields or reason |
-| --- | --- | --- |
-| `text_layer.pdf` | PDF text layer; 1 page | FDR `SYNTH-FDR-0001`; Synthetic Community Bank 01; Synthetic Branch 001; INR 235,357.00; issue date 05 Mar 2024; maturity date 24 Oct 2027; interest rate not found |
-| `image_only.pdf` | OCR unavailable | All seven fields not evaluated because Tesseract is not installed |
-| `clean.png` | OCR unavailable | All seven fields not evaluated because Tesseract is not installed |
-| `noisy.jpg` | OCR unavailable | All seven fields not evaluated because Tesseract is not installed |
-| `blank.png` | OCR unavailable | All seven fields not evaluated because Tesseract is not installed |
+| Fixture | Method | fdr_number | bank_name | branch_name | amount | interest_rate | issue_date | maturity_date |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `text_layer.pdf` | PDF text layer | `SYNTH-FDR-0001` (match; conf. NULL) | `Synthetic Community Bank 01` (match; NULL) | `Synthetic Branch 001` (match; NULL) | `INR 235,357.00` (match; NULL) | not extracted (NULL) | `05 Mar 2024` (match; NULL) | `24 Oct 2027` (match; NULL) |
+| `image_only.pdf` | Tesseract OCR | `SYNTH-FDR-0005` (match; 0.820) | `Synthetic Community Bank 05` (match; 0.954) | `Synthetic Branch 005` (match; 0.940) | `INR 3,345,652.00` (differs; 0.865) | not extracted (NULL) | `30 Jul 2024` (match; 0.957) | `23 Dec 2026` (match; 0.957) |
+| `clean.png` | Tesseract OCR | `SYNTH-FDR-0001` (match; 0.910) | `Synthetic Community Bank 01` (match; 0.958) | `Synthetic Branch 001` (match; 0.960) | `INR 235,357.00` (match; 0.960) | not extracted (NULL) | `05 Mar 2024` (match; 0.953) | `24 Oct 2027` (match; 0.953) |
+| `noisy.jpg` | Tesseract OCR | not extracted (NULL) | not extracted (NULL) | not extracted (NULL) | not extracted (NULL) | not extracted (NULL) | not extracted (NULL) | not extracted (NULL) |
+| `blank.png` | Tesseract OCR | not extracted (NULL) | not extracted (NULL) | not extracted (NULL) | not extracted (NULL) | not extracted (NULL) | not extracted (NULL) | not extracted (NULL) |
 
-Four Tesseract-dependent backend tests were skipped because the binary is unavailable; fake-engine pipeline tests and the PDF text-layer test ran.
+The noisy JPEG yielded no configured fields, rather than silently returning confident incorrect values. In the separate real-engine smoke test's noisy sample, the fields that did extract were either low confidence (FDR number 0.500) or matched their synthetic values; the test asserts that high-confidence values match. The text-layer PDF values all have NULL confidence because they came from embedded text, not Tesseract. Four Tesseract-dependent backend tests, previously skipped when the app failed to load `backend/.env`, now ran successfully. These fixtures are synthetic-only and say nothing about OCR performance on real bank documents.
 
 ## Permissions and API
 

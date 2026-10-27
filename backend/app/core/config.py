@@ -10,7 +10,9 @@ from dotenv import load_dotenv
 from sqlalchemy.engine import URL, make_url
 
 
-# Load the project-level .env for local development; existing process variables win.
+# Local process settings win. Then load backend/.env for backend-only tools, followed
+# by the repository-level .env for shared local development settings.
+load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 

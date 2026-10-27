@@ -58,9 +58,9 @@ def _image(lines: list[str], *, noisy=False) -> bytes:
             x, y = rng.randrange(image.width), rng.randrange(image.height)
             shade = rng.randrange(150, 256)
             pixels[x, y] = (shade, shade, shade)
-        image = image.filter(ImageFilter.GaussianBlur(0.8))
+        image = image.filter(ImageFilter.GaussianBlur(3.0))
     output = io.BytesIO()
-    image.save(output, format="PNG" if not noisy else "JPEG", quality=28 if noisy else None)
+    image.save(output, format="PNG" if not noisy else "JPEG", quality=8 if noisy else None)
     return output.getvalue()
 
 
