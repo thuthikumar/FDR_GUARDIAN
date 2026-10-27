@@ -11,8 +11,10 @@ export default function AppShell() {
   if (!user) return null
 
   const links = [
+    { label: 'Dashboard', to: '/dashboard', permission: 'report.read' },
     { label: 'Institutions', to: '/institutions', permission: 'institution.read' },
     { label: 'FDR Registry', to: '/fdrs', permission: 'fdr.read' },
+    { label: 'Reports', to: '/reports', permission: 'report.read' },
   ].filter((link) => user.permissions.includes(link.permission))
 
   async function handleLogout() {

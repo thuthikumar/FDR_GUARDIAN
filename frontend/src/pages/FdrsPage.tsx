@@ -13,9 +13,10 @@ export default function FdrsPage() {
   const { apiFetch, user } = useAuth()
   const navigate = useNavigate()
   const [search, setSearch] = useState('')
-  const [status, setStatus] = useState('')
-  const [maturityFrom, setMaturityFrom] = useState('')
-  const [maturityTo, setMaturityTo] = useState('')
+  const [status, setStatus] = useState(() => new URLSearchParams(window.location.search).get('record_status') || '')
+  const [maturityFrom, setMaturityFrom] = useState(() => new URLSearchParams(window.location.search).get('maturity_from') || '')
+  const [maturityTo, setMaturityTo] = useState(() => new URLSearchParams(window.location.search).get('maturity_to') || '')
+  const [institutionId] = useState(() => new URLSearchParams(window.location.search).get('institution_id') || '')
   const [sortBy, setSortBy] = useState('maturity_date')
   const [sortOrder, setSortOrder] = useState('asc')
   const [page, setPage] = useState(1)
@@ -32,6 +33,7 @@ export default function FdrsPage() {
     if (status) query.set('record_status', status)
     if (maturityFrom) query.set('maturity_from', maturityFrom)
     if (maturityTo) query.set('maturity_to', maturityTo)
+    if (institutionId) query.set('institution_id', institutionId)
     void apiFetch(`/api/v1/fdrs?${query}`)
       .then(async (response) => {
         if (!response.ok) throw new Error(await responseError(response))
@@ -41,7 +43,7 @@ export default function FdrsPage() {
       .catch((reason: unknown) => { if (active) setError(reason instanceof Error ? reason.message : 'FDR records could not be loaded.') })
       .finally(() => { if (active) setLoading(false) })
     return () => { active = false }
-  }, [apiFetch, page, search, status, maturityFrom, maturityTo, sortBy, sortOrder])
+  }, [apiFetch, page, search, status, maturityFrom, maturityTo, institutionId, sortBy, sortOrder])
 
   function resetPage(update: () => void) { update(); setPage(1) }
 

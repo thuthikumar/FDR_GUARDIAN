@@ -71,6 +71,19 @@ def refresh_token_reuse_grace_seconds() -> int:
     return value
 
 
+def maturity_thresholds() -> tuple[int, int, int]:
+    """Return demo cutoffs as (urgent, attention, upcoming) days."""
+    try:
+        urgent = int(os.getenv("MATURITY_URGENT_DAYS", "7"))
+        attention = int(os.getenv("MATURITY_ATTENTION_DAYS", "30"))
+        upcoming = int(os.getenv("MATURITY_UPCOMING_DAYS", "90"))
+    except ValueError as exc:
+        raise RuntimeError("Maturity demo thresholds must be positive integers") from exc
+    if not (0 < urgent < attention < upcoming):
+        raise RuntimeError("Maturity demo thresholds must satisfy 0 < urgent < attention < upcoming")
+    return urgent, attention, upcoming
+
+
 def _positive_int(name: str, default: int) -> int:
     try:
         value = int(os.getenv(name, str(default)))

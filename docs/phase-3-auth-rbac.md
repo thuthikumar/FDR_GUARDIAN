@@ -15,7 +15,7 @@ All demo accounts and records are synthetic. The application has no access to AI
 | `final_approver` | `institution.read`, `fdr.read`, `document.read`, `case.read`, `case.approve`, `alert.read`, `report.read` |
 | `read_only_auditor` | `institution.read`, `fdr.read`, `document.read`, `case.read`, `alert.read`, `audit.read`, `report.read`, `report.export` |
 
-`read_only_auditor` has no write permission. `institution.write` is granted only to `system_admin`; it enables institution registry management in Phase 4. These permissions are enforced by FastAPI dependencies; React route guards only improve the user experience. Phase 3 implements a protected `/api/v1/admin/users` surface and auth routes. FDR, document, workflow, alert, and report CRUD endpoints remain out of scope for Phase 3.
+`read_only_auditor` has no write permission. `institution.write` is granted only to `system_admin`; it enables institution registry management in Phase 4. These permissions are enforced by FastAPI dependencies; React route guards only improve the user experience. Phase 3 implements a protected `/api/v1/admin/users` surface and auth routes. The Phase 5 dashboard and read-only report endpoints reuse `report.read`; CSV exports additionally require `report.export`, held by Accounts Officers and Read-only Auditors. These report endpoints never modify FDR, case, or alert rows.
 
 ## Token and cookie design
 
@@ -57,6 +57,8 @@ The command refuses to run in production, without the password variable, or with
 ## Institution isolation
 
 Only `institution_admin` is restricted to the `institution_id` on their user account. FDR query helpers automatically filter their queries to that institution. A request for another institution's FDR returns 404, the same response as a missing record, so the other institution's record existence is not disclosed. Other proposed roles are global. This policy is implemented in backend helpers and must be applied by future record endpoints; frontend hiding is not a security boundary.
+
+Phase 5 applies the same institution filter to dashboard metrics, chart aggregates, institution summaries, maturity rows, and CSV exports. A requested other-institution filter from an institution administrator is ignored in favor of the administrator's own institution scope.
 
 ## User administration
 
