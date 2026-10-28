@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { BRANDING, SHOW_GOV_BRANDING } from '../config/branding'
-import SystemStatusPanel from './SystemStatusPanel'
 import { GovernmentIdentity } from './BrandIdentity'
 
 const routePermissions: Record<string, string> = {
@@ -35,7 +34,6 @@ export default function AppFooter() {
       </div>
       <div className="footer-identity-row">
         <GovernmentIdentity compact />
-        <div className="footer-status"><SystemStatusPanel /></div>
       </div>
       <p className="footer-disclaimer">{BRANDING.footerDisclaimer}</p>
     </div>

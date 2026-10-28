@@ -220,7 +220,7 @@ button { color: inherit; }
 .footer-grid ul { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
 .footer-grid a { color: #dbe6ff; font-size: .82rem; }
 .footer-grid a:hover { color: #fff; text-decoration: underline; }
-.footer-identity-row { display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; padding: 1.25rem 0; }
+.footer-identity-row { display: flex; align-items: center; justify-content: center; gap: 1.5rem; padding: 1.25rem 0; }
 .government-identity { display: flex; align-items: center; gap: .8rem; color: var(--navy); }
 .government-identity > span:last-child { display: grid; gap: .1rem; }
 .government-identity strong { font-size: 1rem; font-weight: 800; }
@@ -230,9 +230,6 @@ button { color: inherit; }
 .government-identity-compact small { color: #e0e9ff; }
 .government-identity-compact .brand-emblem { filter: grayscale(1) brightness(0) invert(1); }
 .government-identity-compact .brand-shield { border-color: #fff; color: #fff; }
-.footer-status { width: min(350px, 100%); }
-.footer-status [aria-label="System status"] { border-color: rgb(255 255 255 / 25%); background: rgb(255 255 255 / 10%); color: #fff; box-shadow: none; }
-.footer-status [aria-label="System status"] p { color: #e6edff !important; }
 .footer-disclaimer { margin: 0; border-top: 1px solid rgb(255 255 255 / 24%); padding: 1rem 0 0; color: #e1e9ff; font-size: .75rem; line-height: 1.7; text-align: center; }
 
 .login-page { min-height: 100vh; background: var(--bg); }
@@ -266,8 +263,6 @@ button { color: inherit; }
 .login-form button:disabled { cursor: wait; opacity: .65; }
 .form-error { margin: 0; border: 1px solid #e8aaaa; border-radius: 6px; padding: .65rem .8rem; background: #fff0f0; color: #8e1515; font-size: .88rem; }
 .login-demo-note { margin: 1rem 0 0 !important; font-size: .78rem !important; }
-.login-status { width: min(1080px, calc(100% - 2rem)); margin: 0 auto 1rem; }
-.login-status [aria-label="System status"] { max-width: 360px; margin-left: auto; }
 .login-disclaimer { width: min(1080px, calc(100% - 2rem)); margin: 0 auto 1.5rem; color: var(--mute); font-size: .75rem; text-align: center; }
 
 html.hc body, html.hc .app-root, html.hc .login-page { background: #000; color: #ff0; }
@@ -322,7 +317,6 @@ html.hc .alert-count { border: 1px solid #ff0; background: #000; color: #ff0; }
   .footer-inner { width: calc(100% - 1.5rem); }
   .footer-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.2rem; }
   .footer-identity-row { align-items: flex-start; flex-direction: column; }
-  .footer-status { width: 100%; }
   .login-main { margin: 1.35rem auto; }
   .login-page-title { font-size: 1.65rem; }
   .login-layout { grid-template-columns: 1fr; }
