@@ -1,10 +1,23 @@
 import type { ReactNode } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { Badge } from './ui/badge'
 import { Button } from './ui/button'
 import { Card, CardContent } from './ui/card'
 
 export function PageHeading({ title, description, action }: { title: string; description: string; action?: ReactNode }) {
-  return <div className="mb-6 flex flex-wrap items-start justify-between gap-4"><div><h1 className="text-2xl font-bold tracking-tight">{title}</h1><p className="mt-1 text-sm text-slate-600">{description}</p></div>{action}</div>
+  const location = useLocation()
+  const parts = location.pathname.split('/').filter(Boolean)
+  const parent = parts[0] === 'fdrs' ? { label: 'FDR Registry', to: '/fdrs' }
+    : parts[0] === 'institutions' ? { label: 'Institutions', to: '/institutions' }
+      : null
+  const nested = Boolean(parent && parts.length > 1)
+  const isDashboard = location.pathname === '/dashboard' || location.pathname === '/'
+  return <div className="page-heading">
+    <nav className="breadcrumb" aria-label="Breadcrumb">
+      {isDashboard ? <span aria-current="page">Dashboard</span> : <><Link to="/dashboard">Dashboard</Link><span aria-hidden="true">/</span>{parent && <>{nested ? <><Link to={parent.to}>{parent.label}</Link><span aria-hidden="true">/</span></> : null}<span aria-current="page">{nested ? title : parent.label}</span></>}{!parent && <span aria-current="page">{title}</span>}</>}
+    </nav>
+    <div className="page-title-row"><div><h1>{title}</h1><p className="page-subtitle">{description}</p></div>{action}</div>
+  </div>
 }
 
 export function StateMessage({ kind, children }: { kind: 'loading' | 'error' | 'empty'; children: ReactNode }) {
@@ -27,13 +40,13 @@ export function Pager({ page, pageSize, total, onPageChange }: { page: number; p
 
 export function StatusBadge({ value }: { value: string }) {
   const tone = value === 'active' || value === 'verified' || value === 'released' || value === 'approved'
-    ? 'bg-emerald-50 text-emerald-800'
+    ? 'status-green'
     : value === 'cancelled' || value === 'rejected' || value === 'inactive'
-      ? 'bg-rose-50 text-rose-800'
+      ? 'status-red'
       : value === 'draft' || value === 'pending' || value === 'not_submitted'
-        ? 'bg-slate-100 text-slate-700'
-        : 'bg-amber-50 text-amber-800'
-  return <Badge variant="outline" className={`border-transparent capitalize ${tone}`}>{value.replaceAll('_', ' ')}</Badge>
+        ? 'status-blue'
+        : 'status-amber'
+  return <Badge variant="outline" className={`status-chip ${tone}`}>{value.replaceAll('_', ' ')}</Badge>
 }
 
 export function SourceBadges({ sourceSystem }: { sourceSystem: string }) {
@@ -41,8 +54,6 @@ export function SourceBadges({ sourceSystem }: { sourceSystem: string }) {
     : sourceSystem === 'MANUAL_ENTRY' ? 'Manual entry'
       : sourceSystem
   return <div className="flex flex-wrap gap-1.5" aria-label="Record data source">
-    <Badge variant="outline" className={sourceSystem === 'MANUAL_ENTRY'
-      ? 'border-violet-200 bg-violet-50 text-violet-800'
-      : 'border-slate-200 bg-slate-50 text-slate-700'}>{label}</Badge>
+    <Badge variant="outline" className={sourceSystem === 'SYNTHETIC_DEMO' ? 'synthetic-source-badge' : 'manual-source-badge'}>{label}</Badge>
   </div>
 }

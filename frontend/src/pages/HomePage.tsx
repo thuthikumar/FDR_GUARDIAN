@@ -1,6 +1,5 @@
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import SystemStatusPanel from '../components/SystemStatusPanel'
 
 export default function HomePage() {
   const { user, logout } = useAuth()
@@ -22,7 +21,7 @@ export default function HomePage() {
           </a>
           <button type="button" onClick={handleLogout} className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">Log out</button>
         </header>
-        <section className="grid gap-8 py-10 md:grid-cols-[1fr_20rem]">
+        <section className="grid gap-8 py-10">
           <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-700">Authenticated workspace</p>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-950">Welcome, {user.full_name}</h1>
@@ -32,7 +31,6 @@ export default function HomePage() {
             </dl>
             <p className="mt-8 text-xs text-slate-500">This Phase 3 home is a sign-in demonstration. Business record workflows are out of scope for this phase.</p>
           </div>
-          <SystemStatusPanel />
         </section>
       </div>
     </main>

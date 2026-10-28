@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import type { FormEvent } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import { BRANDING } from '../config/branding'
 import { PageHeading, Pager, StateMessage } from '../components/RegistryPrimitives'
 import { Button } from '../components/ui/button'
 import { Card, CardContent } from '../components/ui/card'
@@ -51,7 +52,7 @@ export default function AlertsPage() {
     catch(reason){setError(reason instanceof Error?reason.message:'Alert could not be resolved.')}
     finally{setSaving(false)}
   }
-  return <section className="space-y-5"><PageHeading title="Alert Centre" description="Review stored alerts and the maturity rule that explains each monitoring alert."/><p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">Maturity thresholds are demo defaults, not verified AICTE policy. A past stored maturity date means overdue-date review, not that an instrument is invalid.</p>
+  return <section className="space-y-5"><PageHeading title="Alert Centre" description="Review stored alerts and the maturity rule that explains each monitoring alert."/><p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">{BRANDING.policyCaution}</p>
     <Card><CardContent><div className="grid gap-3 py-3 sm:grid-cols-2 lg:grid-cols-5">
       <label className="text-xs">Search internal FDR ID<Input aria-label="Search internal FDR ID" value={q} onChange={(e)=>filtersChanged(()=>setQ(e.target.value))}/></label>
       <label className="text-xs">Severity<select aria-label="Filter severity" value={severity} onChange={(e)=>filtersChanged(()=>setSeverity(e.target.value))} className="mt-1 h-9 w-full rounded-lg border bg-white px-2"><option value="">All severities</option>{['low','medium','high','critical'].map(v=><option key={v}>{v}</option>)}</select></label>
