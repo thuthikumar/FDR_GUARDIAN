@@ -1,22 +1,45 @@
-import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { createContext, useContext, useEffect, useState, type FormEvent } from 'react'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Search } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
-import SystemStatusPanel from './SystemStatusPanel'
+import { BRANDING } from '../config/branding'
+import AppFooter from './AppFooter'
+import { HeaderBrand } from './BrandIdentity'
+import DisplayControls from './DisplayControls'
 import { Button } from './ui/button'
+
+type ShellAlertContextValue = { openAlertCount: number | null; setOpenAlertCount: (count: number | null) => void }
+const ShellAlertContext = createContext<ShellAlertContextValue>({ openAlertCount: null, setOpenAlertCount: () => undefined })
+export function useShellAlertCount() { return useContext(ShellAlertContext) }
+
+const navigation = [
+  { label: 'Dashboard', to: '/dashboard', permission: 'report.read' },
+  { label: 'Institutions', to: '/institutions', permission: 'institution.read' },
+  { label: 'FDR Registry', to: '/fdrs', permission: 'fdr.read' },
+  { label: 'Reports', to: '/reports', permission: 'report.read' },
+  { label: 'Alert Centre', to: '/alerts', permission: 'alert.read' },
+]
+
+function initials(name: string) {
+  return name.trim().split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('') || 'U'
+}
+
+function displayRole(role: string) {
+  return role.replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
 
 export default function AppShell() {
   const { user, logout } = useAuth()
   const [loggingOut, setLoggingOut] = useState(false)
+  const [search, setSearch] = useState('')
+  const [openAlertCount, setOpenAlertCount] = useState<number | null>(null)
   const navigate = useNavigate()
+  const location = useLocation()
+  const links = user ? navigation.filter((link) => user.permissions.includes(link.permission)) : []
+  useEffect(() => {
+    setSearch(location.pathname === '/fdrs' ? new URLSearchParams(location.search).get('q') ?? '' : '')
+  }, [location.pathname, location.search])
   if (!user) return null
-
-  const links = [
-    { label: 'Dashboard', to: '/dashboard', permission: 'report.read' },
-    { label: 'Institutions', to: '/institutions', permission: 'institution.read' },
-    { label: 'FDR Registry', to: '/fdrs', permission: 'fdr.read' },
-    { label: 'Reports', to: '/reports', permission: 'report.read' },
-    { label: 'Alert Centre', to: '/alerts', permission: 'alert.read' },
-  ].filter((link) => user.permissions.includes(link.permission))
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -28,41 +51,46 @@ export default function AppShell() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 md:flex">
-      <aside className="flex w-full flex-col border-b border-slate-200 bg-white md:min-h-screen md:w-64 md:border-b-0 md:border-r">
-        <div className="flex items-center gap-3 px-5 py-5">
-          <span className="brand-mark" aria-hidden="true">F</span>
-          <div><p className="text-sm font-bold">FDR Guardian</p><p className="text-xs text-slate-500">Synthetic data workspace</p></div>
+  function submitSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    navigate(`/fdrs${search.trim() ? `?q=${encodeURIComponent(search.trim())}` : ''}`)
+  }
+
+  const shellContext: ShellAlertContextValue = { openAlertCount, setOpenAlertCount }
+  return <ShellAlertContext.Provider value={shellContext}>
+    <div className="app-root">
+      <a className="skip-link" href="#main-content">Skip to content</a>
+      <header className="site-header">
+        <div className="header-primary">
+          <Link className="brand-link" to="/dashboard" aria-label={BRANDING.headerLabel}><HeaderBrand /></Link>
+          {user.permissions.includes('fdr.read') && <form className="global-search" role="search" onSubmit={submitSearch}>
+            <label className="sr-only" htmlFor="global-fdr-search">Search the FDR registry</label>
+            <Search size={19} aria-hidden="true" />
+            <input id="global-fdr-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search FDR registry" />
+            <label className="sr-only" htmlFor="global-search-fields">Search field</label>
+            <select id="global-search-fields" value="all" onChange={() => undefined}><option value="all">All fields</option></select>
+            <button type="submit" aria-label="Search FDR registry"><Search size={17} aria-hidden="true" /></button>
+          </form>}
+          <div className="account-tools">
+            <span className="user-avatar" aria-hidden="true">{initials(user.full_name)}</span>
+            <span className="user-copy"><strong>{user.full_name}</strong><small>{displayRole(user.role)}</small></span>
+            <Button variant="outline" className="sign-out" disabled={loggingOut} onClick={() => void handleLogout()}>
+              {loggingOut ? 'Signing out…' : 'Sign out'}
+            </Button>
+          </div>
         </div>
-        <nav aria-label="Main navigation" className="flex gap-2 px-4 pb-4 md:flex-col md:py-2">
-          {links.map((link) => (
-            <NavLink key={link.to} to={link.to} className={({ isActive }) => `rounded-lg px-3 py-2 text-sm font-medium ${isActive ? 'bg-blue-50 text-blue-800' : 'text-slate-600 hover:bg-slate-100'}`}>
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="mt-auto hidden space-y-4 p-4 md:block"><SystemStatusPanel /></div>
-      </aside>
-      <div className="min-w-0 flex-1">
-        <header className="flex min-h-16 items-center justify-between border-b border-slate-200 bg-white px-5 py-3 sm:px-8">
-          <p className="text-sm text-slate-500">Institution and deposit registry</p>
-          <details className="relative">
-            <summary className="cursor-pointer list-none rounded-lg px-3 py-2 text-right hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-blue-700">
-              <span className="block text-sm font-semibold">{user.full_name}</span>
-              <span className="block text-xs capitalize text-slate-500">{user.role.replaceAll('_', ' ')}</span>
-            </summary>
-            <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
-              <p className="mb-3 break-all text-xs text-slate-500">{user.email}</p>
-              <Button variant="outline" className="w-full" disabled={loggingOut} onClick={handleLogout}>
-                {loggingOut ? 'Signing out…' : 'Log out'}
-              </Button>
-            </div>
-          </details>
-        </header>
-        <main className="mx-auto max-w-7xl px-4 py-6 sm:px-8 sm:py-9"><Outlet /></main>
-        <div className="px-4 pb-5 md:hidden"><SystemStatusPanel /></div>
-      </div>
+        <div className="header-secondary">
+          <nav className="primary-nav" aria-label="Main navigation">
+            {links.map((link) => <NavLink key={link.to} to={link.to} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+              {link.label}{link.to === '/alerts' && openAlertCount !== null && <span className="alert-count" aria-label={`${openAlertCount} open alerts`}>{openAlertCount}</span>}
+            </NavLink>)}
+          </nav>
+          <DisplayControls />
+        </div>
+        <p className="prototype-notice" role="note">{BRANDING.prototypeNotice}</p>
+      </header>
+      <main id="main-content" className="app-main"><Outlet /></main>
+      <AppFooter />
     </div>
-  )
+  </ShellAlertContext.Provider>
 }

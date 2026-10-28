@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { BRANDING } from '../config/branding'
 
 type ApiStatus = 'checking' | 'connected' | 'unavailable'
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
@@ -33,7 +34,7 @@ export default function SystemStatusPanel() {
       <p className={`mt-2 text-sm font-semibold ${status === 'connected' ? 'text-green-700' : status === 'unavailable' ? 'text-amber-700' : 'text-slate-600'}`}>
         {label}
       </p>
-      <p className="mt-2 text-xs leading-5 text-slate-500">Phase 1 health monitoring remains available. No production AICTE data is connected.</p>
+      <p className="mt-2 text-xs leading-5 text-slate-500">{BRANDING.systemStatusNote}</p>
     </aside>
   )
 }

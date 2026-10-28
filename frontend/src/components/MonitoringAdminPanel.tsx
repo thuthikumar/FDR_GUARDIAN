@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../auth/AuthContext'
+import { BRANDING } from '../config/branding'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { responseError } from '../lib/registry'
@@ -23,7 +24,7 @@ export default function MonitoringAdminPanel(){
     catch(reason){setError(reason instanceof Error?reason.message:'Monitoring run failed.')}finally{setLoading(false)}
   }
   return <Card><CardHeader><div className="flex items-center justify-between gap-3"><CardTitle>Monitoring administration</CardTitle><Button onClick={()=>void runNow()} disabled={loading}>{loading?'Running…':'Run now'}</Button></div></CardHeader><CardContent className="space-y-4">
-    {error&&<p role="alert" className="text-sm text-rose-700">{error}</p>}<p className="text-sm text-amber-900">{notice||'Maturity rules are demo defaults, not verified AICTE policy.'}</p>
+    {error&&<p role="alert" className="text-sm text-rose-700">{error}</p>}<p className="text-sm text-amber-900">{notice||BRANDING.policyCaution}</p>
     <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">{rules.map((rule)=><div key={rule.rule_key} className="rounded-lg border p-3"><p className="font-semibold">{rule.label}</p><p className="text-xs capitalize text-slate-600">{rule.min_days===null?'Past':`${rule.min_days} days`} – {rule.max_days===null?'and beyond':`${rule.max_days} days`} · {rule.severity}</p></div>)}</div>
     <h3 className="font-semibold">Recent runs</h3>{runs.length===0?<p className="text-sm text-slate-500">No monitoring runs yet.</p>:<div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead><tr><th className="p-2">Started</th><th className="p-2">Trigger</th><th className="p-2">Status</th><th className="p-2">Evaluated</th><th className="p-2">Created</th><th className="p-2">Other changes</th></tr></thead><tbody>{runs.map(run=><tr key={run.id} className="border-t"><td className="p-2">{new Date(run.started_at).toLocaleString('en-IN')}</td><td className="p-2 capitalize">{run.trigger}</td><td className="p-2 capitalize">{run.status}</td><td className="p-2">{run.records_evaluated}</td><td className="p-2">{run.alerts_created}</td><td className="p-2">S {run.alerts_superseded} · R {run.alerts_resolved} · O {run.alerts_reopened} · U {run.alerts_unchanged}</td></tr>)}</tbody></table></div>}
   </CardContent></Card>

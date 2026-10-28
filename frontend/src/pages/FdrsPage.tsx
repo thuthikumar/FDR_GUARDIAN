@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { PageHeading, Pager, SourceBadges, StateMessage, StatusBadge } from '../components/RegistryPrimitives'
 import { Button } from '../components/ui/button'
@@ -12,7 +12,8 @@ const PAGE_SIZE = 10
 export default function FdrsPage() {
   const { apiFetch, user } = useAuth()
   const navigate = useNavigate()
-  const [search, setSearch] = useState('')
+  const location = useLocation()
+  const [search, setSearch] = useState(() => new URLSearchParams(location.search).get('q') || '')
   const [status, setStatus] = useState(() => new URLSearchParams(window.location.search).get('record_status') || '')
   const [maturityFrom, setMaturityFrom] = useState(() => new URLSearchParams(window.location.search).get('maturity_from') || '')
   const [maturityTo, setMaturityTo] = useState(() => new URLSearchParams(window.location.search).get('maturity_to') || '')
@@ -23,6 +24,8 @@ export default function FdrsPage() {
   const [data, setData] = useState<PageResult<FdrRecord> | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  useEffect(() => { setSearch(new URLSearchParams(location.search).get('q') || '') }, [location.search])
 
   useEffect(() => {
     let active = true
