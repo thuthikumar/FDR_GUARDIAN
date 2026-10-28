@@ -8,7 +8,6 @@ export const BRANDING = {
   emblemAlt: 'State Emblem of India',
   neutralMarkLabel: 'FDR Guardian shield',
   subtitle: 'Security Deposit and FDR Lifecycle Management',
-  prototypeNotice: 'Prototype for SIH 2026. Synthetic data only. Not an official government website.',
   footerDisclaimer: 'Prototype for Smart India Hackathon 2026 (SIH26265). Demo with synthetic data only. Not an official government website and not connected to AICTE or any government system.',
   governmentIdentity: ['Government of India', 'Ministry of Education · AICTE'] as const,
   publicIdentity: ['FDR Guardian', 'Demo workspace'] as const,

@@ -5,7 +5,6 @@ import { useAuth } from '../auth/AuthContext'
 import { BRANDING } from '../config/branding'
 import AppFooter from './AppFooter'
 import { HeaderBrand } from './BrandIdentity'
-import DisplayControls from './DisplayControls'
 import { Button } from './ui/button'
 
 type ShellAlertContextValue = { openAlertCount: number | null; setOpenAlertCount: (count: number | null) => void }
@@ -85,9 +84,7 @@ export default function AppShell() {
               {link.label}{link.to === '/alerts' && openAlertCount !== null && <span className="alert-count" aria-label={`${openAlertCount} open alerts`}>{openAlertCount}</span>}
             </NavLink>)}
           </nav>
-          <DisplayControls />
         </div>
-        <p className="prototype-notice" role="note">{BRANDING.prototypeNotice}</p>
       </header>
       <main id="main-content" className="app-main"><Outlet /></main>
       <AppFooter />

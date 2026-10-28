@@ -1,12 +1,15 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Building2, ClipboardCheck, ShieldCheck } from 'lucide-react'
 import { useAuth } from '../auth/AuthContext'
-import { BRANDING } from '../config/branding'
 import { GovernmentIdentity, HeaderBrand } from '../components/BrandIdentity'
-import DisplayControls from '../components/DisplayControls'
 import AppFooter from '../components/AppFooter'
 
-const sharedModules = ['Dashboard', 'Institutions', 'FDR Registry', 'Reports', 'Alert Centre']
+const portalAssurances = [
+  { label: 'Role-based secure access', Icon: ShieldCheck },
+  { label: 'Institution-level data separation', Icon: Building2 },
+  { label: 'Complete audit trail of actions', Icon: ClipboardCheck },
+]
 
 export default function LoginPage() {
   const { login } = useAuth()
@@ -40,8 +43,7 @@ export default function LoginPage() {
 
   return <div className="login-page">
     <a className="skip-link" href="#login-form">Skip to sign in</a>
-    <header className="login-topbar"><Link to="/login" aria-label="FDR Guardian sign in"><HeaderBrand /></Link><DisplayControls /></header>
-    <p className="prototype-notice login-notice" role="note">{BRANDING.prototypeNotice}</p>
+    <header className="login-topbar"><Link to="/login" aria-label="FDR Guardian sign in"><HeaderBrand /></Link></header>
     <main id="main-content" className="login-main">
       <p className="login-kicker">Secure workspace</p>
       <h1 className="login-page-title">Sign in to FDR Guardian</h1>
@@ -49,12 +51,13 @@ export default function LoginPage() {
       <div className="login-layout">
         <section className="login-intro">
           <GovernmentIdentity />
-          <h2>Your FDR workspace</h2>
-          <p>Sign in with your authorised account to view the modules available for your assigned permissions.</p>
-          <h3>After sign-in you will see</h3>
-          <ul>{sharedModules.map((module) => <li key={module}>{module}</li>)}</ul>
-          <p className="login-role-note">Document, audit and monitoring tools appear only for accounts with the corresponding access.</p>
-          <span className="synthetic-demo-badge">Synthetic demo</span>
+          <h2>Security Deposit and FDR Management Portal</h2>
+          <p className="login-intro-description">Authorised access for institutions and officers to record, monitor and verify fixed deposit receipts.</p>
+          <div className="login-intro-divider" aria-hidden="true" />
+          <ul className="login-assurances" aria-label="Portal safeguards">
+            {portalAssurances.map(({ label, Icon }) => <li key={label}><Icon size={17} strokeWidth={1.8} aria-hidden="true" /><span>{label}</span></li>)}
+          </ul>
+          <p className="login-authorised-notice">Authorised users only. All activity is logged.</p>
         </section>
         <section className="login-form-panel" aria-labelledby="login-form-title">
           <h2 id="login-form-title">Account sign in</h2>

@@ -21,7 +21,7 @@ Tokens live in `frontend/src/styles.css` on `:root` and are shared by page style
 | `--line` | `#e3e8f1` | Borders and dividers |
 | `--tint` | `#eef3fd` | Soft blue surface |
 
-The base font is 16px with `Noto Sans`, `Segoe UI`, and Arial fallbacks. A sticky header contains permission-filtered horizontal navigation, registry search, account actions, and in-memory text-size and high-contrast controls. The dashboard hero and KPI values use existing API data. All existing routes, permission checks, and API operations remain the source of application behavior.
+The base font is 16px with `Noto Sans`, `Segoe UI`, and Arial fallbacks. A sticky header contains permission-filtered horizontal navigation, registry search and account actions. The dashboard hero and KPI values use existing API data. All existing routes, permission checks, and API operations remain the source of application behavior.
 
 ## Government identity display
 
@@ -31,8 +31,8 @@ Brand identity text and the configuration flag are centralized in `frontend/src/
 VITE_SHOW_GOV_BRANDING=false
 ```
 
-With the flag off, header, login and footer identities use a neutral shield and FDR Guardian/demo wording in place of the emblem and government identity labels. The non-dismissible prototype notice and footer disclaimer remain visible in both modes. The public-build setting can be checked in Vercel under Project Settings → Environment Variables; add it for the desired deployment environments and redeploy.
+With the flag off, header, login and footer identities use a neutral shield and FDR Guardian/demo wording in place of the emblem and government identity labels. The header prototype notice has been removed. The footer disclaimer remains visible in both modes. The public-build setting can be checked in Vercel under Project Settings → Environment Variables; add it for the desired deployment environments and redeploy.
 
 ## Accessibility
 
-The skip link targets the main content, controls retain accessible names and pressed states, and visible keyboard focus uses a 3px saffron-tinted outline. Text-size and high-contrast preferences are React memory state only and reset on page reload. The high-contrast mode switches the `html` element to `.hc` variables.
+The skip link targets the main content, ARIA labels remain in place, and visible keyboard focus uses a 3px saffron-tinted outline. The login portal panel keeps its text and icon contrast high against the navy background.
