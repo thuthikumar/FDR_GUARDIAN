@@ -2,7 +2,7 @@
 
 FDR Guardian is an administrative platform foundation for managing institution-wise Fixed Deposit Receipt (FDR) and security deposit lifecycles, including document verification, maturity monitoring, discrepancies, approvals, notifications, and audit history.
 
-The current milestone is **Phase 6: Maturity Monitoring and Alert Generation**. The project contains a React/TypeScript dashboard, registry, and Alert Centre; a FastAPI API; PostgreSQL schema managed with Alembic; backend-enforced permissions and institution scope; audited reports; and clearly labelled synthetic development records. It does not connect to AICTE production systems or contain real institutional FDR records.
+The current milestone is **Phase 7: Secure Document Upload and OCR-Assisted Extraction**. The project contains a React/TypeScript dashboard, registry, Alert Centre, and FDR documents workspace; a FastAPI API; PostgreSQL schema managed with Alembic; private local file storage; backend-enforced permissions and institution scope; audited reports; and clearly labelled synthetic development records. It does not connect to AICTE production systems or contain real institutional FDR records.
 
 ## Prerequisites
 
@@ -134,7 +134,7 @@ Synthetic demo login emails (all use the local `SEED_DEV_PASSWORD`; this README 
 
 The permission mapping is a proposed application design and is not a verified AICTE role structure. Route guards in React are for user experience; all authentication and permissions are enforced by FastAPI. See [docs/phase-3-auth-rbac.md](docs/phase-3-auth-rbac.md) for the role matrix and authentication details, [docs/phase-4-fdr-management.md](docs/phase-4-fdr-management.md) for registry endpoints, validation, status transitions, and history, and [docs/phase-5-dashboard-reports.md](docs/phase-5-dashboard-reports.md) for dashboard metrics, report endpoints, maturity buckets, and CSV rules.
 
-The dashboard loads at `/` after login. Open **Alert Centre** in the navigation to filter and review alerts. System administrators can see the monitoring rules, run history, and **Run now** controls on the dashboard. Maturity thresholds are demo defaults, not verified AICTE policy. See [docs/phase-6-monitoring.md](docs/phase-6-monitoring.md) for lifecycle, APIs, and permissions.
+The dashboard loads at `/` after login. Open **Alert Centre** in the navigation to filter and review alerts. System administrators can see the monitoring rules, run history, and **Run now** controls on the dashboard. Maturity thresholds are demo defaults, not verified AICTE policy. See [docs/phase-6-monitoring.md](docs/phase-6-monitoring.md) for lifecycle, APIs, and permissions and [docs/phase-7-documents-ocr.md](docs/phase-7-documents-ocr.md) for private document storage, validation, and extraction.
 
 The Phase 5 JSON endpoints are `GET /api/v1/dashboard/summary`, `GET /api/v1/dashboard/charts`, `GET /api/v1/reports/institution-summary`, and `GET /api/v1/reports/maturities`. Both reports accept `format=csv` for authorised exports. Dashboard and reports require `report.read`; exports also require `report.export`.
 
@@ -186,9 +186,23 @@ npm.cmd test
 From the `backend` directory, with its virtual environment activated and PostgreSQL running:
 
 ```powershell
+python -m pip install -r requirements-dev.txt
 python -m pytest
 ```
 
 The test suite uses `TEST_DATABASE_URL`, or derives a separate database name by appending `_test` to `DATABASE_URL`. The fixture refuses any database whose name does not end in `_test` or matches `DATABASE_URL`, before it can create, migrate, or clear anything. If the test database does not exist, the fixture creates it, so the configured database user needs permission to create databases. At session start, tests reset only that dedicated test database and apply migrations. Never point `TEST_DATABASE_URL` at production or at the development database.
 
-Backend tests cover health responses, migration upgrade/downgrade/upgrade, schema constraints, synthetic seed scenarios and idempotency, authentication, lockout and refresh rotation, registry validation, CRUD, permissions, institution isolation, user administration, audit behavior, dashboard metrics, maturity buckets, report scope, and CSV export. Frontend tests cover login validation, protected-route redirects, registry form validation, list pagination, dashboard charts, and report pagination and exports.
+Backend tests cover health responses, migration upgrade/downgrade/upgrade, schema constraints, synthetic seed scenarios and idempotency, authentication, lockout and refresh rotation, registry validation, CRUD, permissions, institution isolation, user administration, audit behavior, dashboard metrics, maturity buckets, report scope, CSV export, private document upload/download, extraction, and OCR failure paths. Frontend tests cover login validation, protected-route redirects, registry forms, list pagination, dashboard charts, reports, document upload validation, polling, extraction display, and authenticated download.
+
+## Private documents and OCR
+
+`STORAGE_ROOT` defaults to `backend/storage`, which is private and gitignored. On this OneDrive-synced project, set it to a local directory outside OneDrive to avoid syncing uploaded files. See `.env.example` for upload and OCR limits. On Windows, install Tesseract with `winget install --id UB-Mannheim.TesseractOCR -e`; set `TESSERACT_CMD` only when it is not on `PATH`. If the binary is missing, the app remains usable and marks OCR processing unavailable.
+
+From `backend/`, generate clearly marked synthetic-only evaluation samples and run the configured extractor:
+
+```powershell
+python -m scripts.generate_ocr_fixtures
+python -m scripts.evaluate_ocr_fixtures
+```
+
+To test an upload manually, migrate and start the API, sign in as an Institution Administrator, open an FDR detail page, and use the **Documents** section. Upload a PDF, PNG, or JPEG under the configured size limit. Poll the document status, inspect its unreviewed extracted values, and use Download to retrieve the original. OCR text and extracted values are not document verification.

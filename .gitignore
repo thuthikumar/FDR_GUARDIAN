@@ -33,6 +33,8 @@ htmlcov/
 **/private/
 **/private-storage/
 **/storage/private/
+backend/storage/
+**/generated-fixtures/
 
 # Local database files, dumps, and Docker volume data
 **/postgres-data/

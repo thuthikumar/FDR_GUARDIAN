@@ -271,7 +271,7 @@ def seed_synthetic_data(session: Session, reference_date: date | None = None) ->
                 "file_size": 1,
                 "checksum": None,
                 "uploaded_by": admin.id,
-                "processing_status": ProcessingStatus.COMPLETED.value,
+                "processing_status": ProcessingStatus.PROCESSED.value,
                 "review_status": ReviewStatus.PENDING.value if number == 9 else ReviewStatus.ACCEPTED.value,
             },
             storage_key,

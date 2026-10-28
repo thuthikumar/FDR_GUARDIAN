@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { PageHeading, SourceBadges, StateMessage, StatusBadge } from '../components/RegistryPrimitives'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
+import FdrDocuments from '../components/FdrDocuments'
 import { formatDate, formatInr, formatHistoryAction, formatHistoryChanges, formatRecordStatusLabel, responseError, type FdrHistoryItem, type FdrRecord } from '../lib/registry'
 
 const transitions: Record<string, string[]> = {
@@ -84,6 +85,7 @@ export default function FdrDetailPage() {
           </dl>
         </CardContent></Card>
         <ActiveAlerts recordId={record.id} />
+        {(user?.permissions.includes('document.read') || user?.permissions.includes('document.upload')) && <FdrDocuments recordId={record.id} />}
         <Card><CardHeader><CardTitle className="text-base">Change history</CardTitle></CardHeader><CardContent>
           {history.length === 0 ? <p className="text-sm text-slate-500">No changes have been recorded yet.</p> : <ol className="space-y-5 border-l border-slate-200 pl-5">
             {history.map((item, index) => <li key={`${index}-${item.timestamp}`} className="relative"><span className="absolute -left-[1.6rem] top-1 size-2.5 rounded-full bg-blue-700" />

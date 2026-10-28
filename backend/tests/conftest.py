@@ -92,10 +92,12 @@ def migrated_test_database() -> Generator[URL, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def clean_test_data(db_engine):
+def clean_test_data(db_engine, tmp_path, monkeypatch):
     """Keep tests isolated even when an API handler commits its session."""
     from app.db.base import Base
     import app.models  # noqa: F401
+
+    monkeypatch.setenv("STORAGE_ROOT", str(tmp_path / "private-storage"))
 
     table_names = [table.name for table in Base.metadata.sorted_tables]
     quoted = ", ".join(db_engine.dialect.identifier_preparer.quote(name) for name in table_names)

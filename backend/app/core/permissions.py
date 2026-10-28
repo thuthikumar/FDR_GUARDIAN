@@ -22,6 +22,7 @@ class Permission(StrEnum):
     CASE_APPROVE = "case.approve"
     DOCUMENT_UPLOAD = "document.upload"
     DOCUMENT_READ = "document.read"
+    DOCUMENT_REPROCESS = "document.reprocess"
     EXTRACTION_REVIEW = "extraction.review"
     RELEASE_RECORD = "release.record"
     REPORT_READ = "report.read"
@@ -42,7 +43,7 @@ ROLE_PERMISSIONS: dict[str, frozenset[Permission]] = {
     UserRole.VERIFICATION_OFFICER.value: frozenset({
         Permission.INSTITUTION_READ, Permission.FDR_READ, Permission.DOCUMENT_READ, Permission.EXTRACTION_REVIEW,
         Permission.CASE_READ, Permission.CASE_REVIEW, Permission.ALERT_READ, Permission.ALERT_MANAGE,
-        Permission.REPORT_READ,
+        Permission.REPORT_READ, Permission.DOCUMENT_REPROCESS,
     }),
     UserRole.ACCOUNTS_OFFICER.value: frozenset({
         Permission.INSTITUTION_READ, Permission.FDR_READ, Permission.CASE_READ, Permission.CASE_FINANCIAL_REVIEW,

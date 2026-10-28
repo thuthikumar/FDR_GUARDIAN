@@ -1,5 +1,6 @@
 """FastAPI application entry point."""
 
+import logging
 import re
 from contextlib import asynccontextmanager
 from uuid import uuid4
@@ -14,12 +15,22 @@ from app.api.institutions import router as institutions_router
 from app.api.fdrs import router as fdrs_router
 from app.api.dashboard_reports import router as dashboard_reports_router
 from app.api.monitoring import router as monitoring_router
-from app.core.config import frontend_origin, validate_security_settings
+from app.api.documents import router as documents_router
+from app.core.config import app_environment, frontend_origin, validate_security_settings, validate_storage_root
 from app.services.scheduler import optional_scheduler
 
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
+    validate_storage_root()
+    if app_environment() != "test":
+        from app.db.session import make_session_factory
+        from app.services.document_processing import stale_processing_count
+        try:
+            with make_session_factory()() as session:
+                logging.getLogger("fdr_guardian.documents").info("stale_document_count", extra={"count": stale_processing_count(session)})
+        except Exception as exc:
+            logging.getLogger("fdr_guardian.documents").warning("stale_document_count_unavailable", extra={"error_type": type(exc).__name__})
     scheduler = optional_scheduler()
     application.state.monitoring_scheduler = scheduler
     if scheduler is not None:
@@ -53,6 +64,7 @@ app.include_router(institutions_router, prefix="/api/v1")
 app.include_router(fdrs_router, prefix="/api/v1")
 app.include_router(dashboard_reports_router, prefix="/api/v1")
 app.include_router(monitoring_router, prefix="/api/v1")
+app.include_router(documents_router, prefix="/api/v1")
 
 
 @app.middleware("http")
