@@ -5,7 +5,7 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 
-from app.core.config import database_url
+from app.core.config import database_url, sqlalchemy_database_url
 from app.db.base import Base
 import app.models  # noqa: F401 - register every model with Base.metadata
 
@@ -26,7 +26,7 @@ def migration_url() -> str:
     url = configured or database_url()
     if not url:
         raise RuntimeError("Set DATABASE_URL before running Alembic")
-    return url
+    return sqlalchemy_database_url(url)
 
 
 def run_migrations_offline() -> None:

@@ -41,30 +41,38 @@ async def lifespan(application: FastAPI):
         if scheduler is not None:
             scheduler.shutdown(wait=True)
 
-validate_security_settings()
+def create_app() -> FastAPI:
+    validate_security_settings()
+    production = app_environment() == "production"
+    application = FastAPI(
+        title="FDR Guardian API",
+        description="Foundation API for security deposit and FDR lifecycle management.",
+        version="0.1.0",
+        lifespan=lifespan,
+        docs_url=None if production else "/docs",
+        redoc_url=None if production else "/redoc",
+        openapi_url=None if production else "/openapi.json",
+    )
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=[frontend_origin()],
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PATCH"],
+        allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+        expose_headers=["X-Request-ID"],
+    )
+    application.include_router(router)
+    application.include_router(auth_router, prefix="/api/v1")
+    application.include_router(admin_router, prefix="/api/v1")
+    application.include_router(institutions_router, prefix="/api/v1")
+    application.include_router(fdrs_router, prefix="/api/v1")
+    application.include_router(dashboard_reports_router, prefix="/api/v1")
+    application.include_router(monitoring_router, prefix="/api/v1")
+    application.include_router(documents_router, prefix="/api/v1")
+    return application
 
-app = FastAPI(
-    title="FDR Guardian API",
-    description="Foundation API for security deposit and FDR lifecycle management.",
-    version="0.1.0",
-    lifespan=lifespan,
-)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[frontend_origin()],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "PATCH"],
-    allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
-    expose_headers=["X-Request-ID"],
-)
-app.include_router(router)
-app.include_router(auth_router, prefix="/api/v1")
-app.include_router(admin_router, prefix="/api/v1")
-app.include_router(institutions_router, prefix="/api/v1")
-app.include_router(fdrs_router, prefix="/api/v1")
-app.include_router(dashboard_reports_router, prefix="/api/v1")
-app.include_router(monitoring_router, prefix="/api/v1")
-app.include_router(documents_router, prefix="/api/v1")
+
+app = create_app()
 
 
 @app.middleware("http")

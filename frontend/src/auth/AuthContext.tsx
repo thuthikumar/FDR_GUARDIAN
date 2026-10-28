@@ -17,11 +17,17 @@ type AuthContextValue = {
   apiFetch: (path: string, init?: RequestInit) => Promise<Response>
 }
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000').replace(/\/$/, '')
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
 const AuthContext = createContext<AuthContextValue | null>(null)
 
+function apiUrl(path: string) {
+  if (/^https?:\/\//i.test(path)) return path
+  const suffix = path.replace(/^\/api\/v1(?=\/|$)/, '')
+  return `${apiBaseUrl}${suffix.startsWith('/') ? suffix : `/${suffix}`}`
+}
+
 async function readUser(token: string): Promise<AuthUser> {
-  const response = await fetch(`${apiBaseUrl}/api/v1/auth/me`, {
+  const response = await fetch(apiUrl('/api/v1/auth/me'), {
     headers: { Authorization: `Bearer ${token}` },
     credentials: 'include',
   })
@@ -36,7 +42,7 @@ let refreshInFlight: Promise<RestoredSession> | null = null
 function restoreSession(): Promise<RestoredSession> {
   if (!refreshInFlight) {
     refreshInFlight = (async () => {
-      const response = await fetch(`${apiBaseUrl}/api/v1/auth/refresh`, {
+      const response = await fetch(apiUrl('/api/v1/auth/refresh'), {
         method: 'POST',
         credentials: 'include',
       })
@@ -89,7 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const epoch = ++sessionEpoch.current
-    const response = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
+    const response = await fetch(apiUrl('/api/v1/auth/login'), {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -111,14 +117,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     sessionEpoch.current += 1
     try {
-      await fetch(`${apiBaseUrl}/api/v1/auth/logout`, { method: 'POST', credentials: 'include' })
+      await fetch(apiUrl('/api/v1/auth/logout'), { method: 'POST', credentials: 'include' })
     } finally {
       clearSession()
     }
   }, [clearSession])
 
   const apiFetch = useCallback(async (path: string, init: RequestInit = {}) => {
-    const url = path.startsWith('http') ? path : `${apiBaseUrl}${path}`
+    const url = apiUrl(path)
     const perform = (token: string | null) => {
       const headers = new Headers(init.headers)
       if (token) headers.set('Authorization', `Bearer ${token}`)
