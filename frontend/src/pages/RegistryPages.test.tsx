@@ -175,7 +175,7 @@ describe('Phase 4 registry pages', () => {
       const bootstrap = bootstrapResponse(url)
       if (bootstrap) return bootstrap
       if (url.includes('/api/v1/fdrs?')) {
-        const page = new URL(url).searchParams.get('page')
+        const page = new URL(url, 'http://localhost').searchParams.get('page')
         return jsonResponse({ items: [page === '2' ? record('two', 'SYN-FDR-0002') : record('one', 'SYN-FDR-0001')], total: 11, page: Number(page), page_size: 10 })
       }
       return jsonResponse({ detail: 'Unexpected request' }, 500)

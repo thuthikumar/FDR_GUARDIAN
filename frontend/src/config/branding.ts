@@ -1,6 +1,6 @@
 const brandingSetting = import.meta.env.VITE_SHOW_GOV_BRANDING
 
-export const SHOW_GOV_BRANDING = brandingSetting === undefined || brandingSetting.toLowerCase() !== 'false'
+export const SHOW_GOV_BRANDING = brandingSetting?.toLowerCase() === 'true'
 
 export const BRANDING = {
   productName: 'FDR Guardian',

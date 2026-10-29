@@ -19,7 +19,15 @@ load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 def database_url() -> str | None:
     """Return the database URL, if configured."""
     value = os.getenv("DATABASE_URL", "").strip()
-    return value or None
+    return sqlalchemy_database_url(value) if value else None
+
+
+def sqlalchemy_database_url(value: str) -> str:
+    """Use the installed psycopg 3 driver for PostgreSQL URLs, including Neon URLs."""
+    parsed = make_url(value)
+    if parsed.drivername == "postgresql":
+        parsed = parsed.set(drivername="postgresql+psycopg")
+    return parsed.render_as_string(hide_password=False)
 
 
 def test_database_url() -> URL:
@@ -186,7 +194,10 @@ def _positive_int(name: str, default: int) -> int:
 
 
 def app_environment() -> str:
-    return os.getenv("APP_ENV", "development").strip().lower()
+    value = os.getenv("APP_ENV", "development")
+    if value not in {"development", "test", "production"}:
+        raise RuntimeError("APP_ENV must be development, test, or production")
+    return value
 
 
 def cookie_secure() -> bool:
@@ -213,4 +224,28 @@ def validate_security_settings() -> None:
     access_token_expire_minutes()
     refresh_token_expire_days()
     cookie_secure()
-    frontend_origin()
+    origin = frontend_origin()
+    if app_environment() == "production":
+        configured_origin = os.getenv("FRONTEND_ORIGIN", "").strip()
+        if not configured_origin:
+            raise RuntimeError("FRONTEND_ORIGIN is required when APP_ENV=production")
+        if not origin.startswith("https://") or "localhost" in origin or "127.0.0.1" in origin:
+            raise RuntimeError("FRONTEND_ORIGIN must be a public HTTPS origin in production")
+    validate_database_settings()
+
+
+def validate_database_settings() -> None:
+    """Require a real PostgreSQL connection string for production startup."""
+    if app_environment() != "production":
+        return
+    value = os.getenv("DATABASE_URL", "").strip()
+    if not value:
+        raise RuntimeError("DATABASE_URL is required when APP_ENV=production")
+    if any(marker in value.lower() for marker in ("placeholder", "change-me", "changeme", "replace", "your-", "example", "password", "<", ">")):
+        raise RuntimeError("DATABASE_URL must be replaced with the configured PostgreSQL connection string")
+    try:
+        parsed = make_url(value)
+    except Exception as exc:
+        raise RuntimeError("DATABASE_URL must be a valid PostgreSQL connection string") from exc
+    if parsed.drivername not in {"postgresql", "postgresql+psycopg"} or not parsed.username or not parsed.password or not parsed.host or not parsed.database:
+        raise RuntimeError("DATABASE_URL must point to a PostgreSQL database")

@@ -34,6 +34,7 @@ describe('ProtectedRoute', () => {
 
     await waitFor(() => expect(screen.getByText('Sign in page')).toBeInTheDocument())
     expect(screen.queryByText('Protected home')).not.toBeInTheDocument()
+    expect(vi.mocked(fetch).mock.calls.some(([input]) => String(input) === '/api/v1/auth/refresh')).toBe(true)
     expect(vi.mocked(fetch).mock.calls.filter(([input]) => String(input).endsWith('/auth/refresh'))).toHaveLength(1)
   })
 

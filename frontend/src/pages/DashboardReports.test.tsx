@@ -32,7 +32,7 @@ describe('Phase 5 dashboard and reports', () => {
       void init
       const url=String(input), initial=bootstrap(url); if(initial) return initial
       if(url.includes('institution-summary')) return response({items:[],total:0,page:1,page_size:10})
-      if(url.includes('reports/maturities')) return response({items:[],total:21,page:Number(new URL(url).searchParams.get('page')),page_size:10})
+      if(url.includes('reports/maturities')) return response({items:[],total:21,page:Number(new URL(url, 'http://localhost').searchParams.get('page')),page_size:10})
       return response({},500)
     })
     vi.stubGlobal('fetch', fetchMock)
