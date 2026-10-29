@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
+import { apiUrl } from '../config/api'
 
 export type AuthUser = {
   id: string
@@ -17,14 +18,7 @@ type AuthContextValue = {
   apiFetch: (path: string, init?: RequestInit) => Promise<Response>
 }
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL || '/api/v1').replace(/\/$/, '')
 const AuthContext = createContext<AuthContextValue | null>(null)
-
-function apiUrl(path: string) {
-  if (/^https?:\/\//i.test(path)) return path
-  const suffix = path.replace(/^\/api\/v1(?=\/|$)/, '')
-  return `${apiBaseUrl}${suffix.startsWith('/') ? suffix : `/${suffix}`}`
-}
 
 async function readUser(token: string): Promise<AuthUser> {
   const response = await fetch(apiUrl('/api/v1/auth/me'), {
