@@ -194,7 +194,10 @@ def _positive_int(name: str, default: int) -> int:
 
 
 def app_environment() -> str:
-    return os.getenv("APP_ENV", "development").strip().lower()
+    value = os.getenv("APP_ENV", "development")
+    if value not in {"development", "test", "production"}:
+        raise RuntimeError("APP_ENV must be development, test, or production")
+    return value
 
 
 def cookie_secure() -> bool:
