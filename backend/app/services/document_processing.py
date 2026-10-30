@@ -246,7 +246,13 @@ def process_document(document_id: UUID, *, engine: OcrEngine | None = None,
 
     try:
         path = selected_storage.resolve(key)
+        if not path.is_file():
+            _set_failed(factory, document_id, "stored_file_missing")
+            return
         candidates, pages, method, engine_name = _extract(path, content_type, selected_engine)
+    except FileNotFoundError:
+        _set_failed(factory, document_id, "stored_file_missing")
+        return
     except OcrUnavailableError:
         with factory() as session, session.begin():
             document = session.get(Document, document_id)
@@ -265,7 +271,7 @@ def process_document(document_id: UUID, *, engine: OcrEngine | None = None,
         logger.info("document_processing_finished", extra={"document_id": str(document_id), "status": "ocr_unavailable"})
         return
     except ProcessingFailure as exc:
-        _set_failed(factory, document_id, exc.code)
+        _set_failed(factory, document_id, "stored_file_missing" if "path" in locals() and not path.is_file() else exc.code)
         return
     except Exception:
         _set_failed(factory, document_id, "processing_error")

@@ -1,6 +1,7 @@
 """Environment-backed configuration."""
 
 import os
+import logging
 import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
@@ -19,7 +20,19 @@ load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 def database_url() -> str | None:
     """Return the database URL, if configured."""
     value = os.getenv("DATABASE_URL", "").strip()
-    return sqlalchemy_database_url(value) if value else None
+    if not value:
+        return None
+    resolved = sqlalchemy_database_url(value)
+    _warn_if_pooler(make_url(resolved))
+    return resolved
+
+
+def _warn_if_pooler(parsed_url: URL) -> None:
+    host = parsed_url.host or ""
+    if "-pooler" in host.lower():
+        logging.getLogger("fdr_guardian.config").warning(
+            "DATABASE_URL host appears to be a Neon pooler; use a direct connection for advisory locks and Alembic"
+        )
 
 
 def sqlalchemy_database_url(value: str) -> str:
@@ -231,6 +244,12 @@ def validate_security_settings() -> None:
             raise RuntimeError("FRONTEND_ORIGIN is required when APP_ENV=production")
         if not origin.startswith("https://") or "localhost" in origin or "127.0.0.1" in origin:
             raise RuntimeError("FRONTEND_ORIGIN must be a public HTTPS origin in production")
+    configured_database_url = os.getenv("DATABASE_URL", "").strip()
+    if configured_database_url:
+        try:
+            _warn_if_pooler(make_url(configured_database_url))
+        except Exception:
+            pass
     validate_database_settings()
 
 
