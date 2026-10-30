@@ -532,6 +532,7 @@ Rollback note: restore a prior app deployment deliberately and do not assume tha
 - `audit.read` is granted to selected roles, but there is no general audit-event query endpoint. Audit records remain in the application database and no separate immutable archive/retention policy is implemented here.
 - Account administration creates users without accepting a password in its create request; a complete invitation/password-reset workflow is **Not verified in repository**.
 - `SCHEDULER_ENABLED=true` runs a process-local scheduler, not a distributed scheduler. It can be duplicated across replicas or missed while an instance is stopped; distributed scheduling/worker reliability is **Not verified in repository**.
+- CORS allows only GET, POST, and PATCH, while `PUT /api/v1/monitoring/rules` exists. Direct cross-origin browser calls to that operation will not be permitted by the configured preflight policy; the documented Vercel same-origin rewrite avoids browser CORS for the normal deployment path.
 - Local filesystem storage and the thread-pool processing queue are process/instance local; the repository does not implement object storage, a durable job queue, or cross-instance coordination for document processing.
 - The app exposes JSON/CSV reports and not a generated PDF/XLSX export; those formats are **Not verified in repository**.
 
