@@ -1,8 +1,8 @@
 from fastapi import Response
 import pytest
 from fastapi.testclient import TestClient
-from app.core.config import database_url, validate_database_settings
-from app.core.config import app_environment, validate_security_settings
+from app.core.config import app_environment, database_url, validate_database_settings, validate_security_settings
+from app.db.confirmation import confirm_database_write
 from app.core.security import verify_password
 from app.db.demo_passwords import update_synthetic_user_passwords
 from app.models.enums import UserRole
@@ -154,3 +154,71 @@ def test_production_docs_routes_return_404_and_health_returns_200(monkeypatch):
     health = client.get("/api/v1/health")
     assert health.status_code == 200
     assert health.json() == {"status": "ok", "service": "fdr-guardian-api"}
+
+
+def test_database_url_warns_for_neon_pooler_host(monkeypatch, caplog):
+    monkeypatch.setenv("DATABASE_URL", "postgresql://demo:secret@db-pooler.invalid/fdr?sslmode=require")
+    with caplog.at_level("WARNING", logger="fdr_guardian.config"):
+        resolved = database_url()
+    assert resolved.startswith("postgresql+psycopg://")
+    assert "pooler" in caplog.text.lower()
+    assert "advisory locks and Alembic" in caplog.text
+    assert "secret" not in caplog.text
+
+
+def test_startup_security_validation_warns_for_pooler_host_in_development(monkeypatch, caplog):
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://demo:secret@db-pooler.invalid/fdr?sslmode=require")
+    monkeypatch.setenv("JWT_SECRET_KEY", "a-local-test-signing-secret-with-more-than-32-chars")
+    monkeypatch.setenv("COOKIE_SECURE", "false")
+    monkeypatch.setenv("FRONTEND_ORIGIN", "http://127.0.0.1:5173")
+    with caplog.at_level("WARNING", logger="fdr_guardian.config"):
+        validate_security_settings()
+    assert "pooler" in caplog.text.lower()
+    assert "advisory locks and Alembic" in caplog.text
+    assert "secret" not in caplog.text
+
+
+def test_process_environment_direct_neon_url_overrides_dotenv_in_development(monkeypatch):
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://laptop:terminal-only@ep-direct.invalid/fdr_demo?sslmode=require")
+    resolved = database_url()
+    assert resolved.startswith("postgresql+psycopg://laptop:")
+    assert "@ep-direct.invalid/fdr_demo" in resolved
+    assert "sslmode=require" in resolved
+
+
+@pytest.mark.parametrize("answer,continues", [("SEED", True), ("ROTATE", True), ("no", False)])
+def test_demo_write_confirmation_shows_only_host(answer, continues, capsys):
+    url = "postgresql://private-user:private-password@db.example.invalid/fdr_demo?sslmode=require"
+    if continues:
+        confirm_database_write(url, action="seed", expected=answer, input_fn=lambda _prompt: answer)
+    else:
+        with pytest.raises(SystemExit, match="no database changes were made"):
+            confirm_database_write(url, action="seed", expected="SEED", input_fn=lambda _prompt: answer)
+    output = capsys.readouterr().out
+    assert "db.example.invalid" in output
+    assert "private-user" not in output and "private-password" not in output
+
+
+@pytest.mark.parametrize("module_name,confirmation", [
+    ("app.db.seed_demo", "SEED"),
+    ("app.db.set_demo_passwords", "ROTATE"),
+])
+def test_demo_cli_cancels_before_opening_database(monkeypatch, capsys, module_name, confirmation):
+    import importlib
+
+    monkeypatch.setenv("APP_ENV", "development")
+    monkeypatch.setenv("DATABASE_URL", "postgresql://laptop:private-password@direct.invalid/fdr_demo?sslmode=require")
+    monkeypatch.setenv("JWT_SECRET_KEY", "a-local-test-signing-secret-with-more-than-32-chars")
+    monkeypatch.setenv("SEED_DEMO_PASSWORD", "synthetic-demo-password")
+    module = importlib.import_module(module_name)
+    prompts = []
+    monkeypatch.setattr("builtins.input", lambda prompt: prompts.append(prompt) or "cancel")
+    monkeypatch.setattr(module, "make_engine", lambda _url: pytest.fail("engine must not be opened before confirmation"))
+    with pytest.raises(SystemExit, match="no database changes were made"):
+        module.main()
+    output = capsys.readouterr().out
+    assert "direct.invalid" in output
+    assert "private-password" not in output and "laptop" not in output
+    assert confirmation in prompts[0]

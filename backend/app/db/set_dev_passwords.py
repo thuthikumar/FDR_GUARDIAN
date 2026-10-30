@@ -16,7 +16,7 @@ def run_set_dev_passwords(session: Session, password: str | None, environment: s
     if environment.strip().lower() == "production":
         raise RuntimeError("set_dev_passwords is disabled when APP_ENV=production")
     if not password:
-        raise RuntimeError("SEED_DEV_PASSWORD must be set")
+        raise RuntimeError("SEED_DEV_PASSWORD is for local development passwords and must be set")
     if len(password) < 12 or password.strip().lower().startswith("replace-"):
         raise RuntimeError("SEED_DEV_PASSWORD must contain at least 12 characters")
 
@@ -36,7 +36,7 @@ def main() -> None:
     if environment == "production":
         raise SystemExit("set_dev_passwords is disabled when APP_ENV=production")
     if not password:
-        raise SystemExit("SEED_DEV_PASSWORD must be set")
+        raise SystemExit("SEED_DEV_PASSWORD is for local development passwords and must be set")
     if len(password) < 12 or password.strip().lower().startswith("replace-"):
         raise SystemExit("SEED_DEV_PASSWORD must contain at least 12 non-placeholder characters")
     url = database_url()

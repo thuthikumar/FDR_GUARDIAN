@@ -60,4 +60,24 @@ describe('FDR documents',()=>{
     expect(screen.queryByLabelText(/Choose PDF, PNG, or JPEG/)).not.toBeInTheDocument()
     expect(screen.getByRole('button',{name:'Reprocess'})).toBeInTheDocument()
   })
+
+  it.each([
+    ['Download','/documents/doc-1/download'],
+    ['View extracted fields','/documents/doc-1/extraction'],
+    ['Reprocess','/documents/doc-1/reprocess'],
+  ])('shows the safe missing-file message after %s',async(button,path)=>{
+    const fetchMock=vi.fn(async(input:RequestInfo|URL,init?:RequestInit)=>{
+      void init
+      const url=String(input),initial=bootstrap(url,verifier)
+      if(initial)return initial
+      if(url.endsWith('/fdrs/fdr-1/documents'))return response({items:[queued]})
+      if(url.endsWith(path))return response({detail:'The stored file is no longer available'},410)
+      return response({},404)
+    })
+    vi.stubGlobal('fetch',fetchMock)
+    renderDocs()
+    fireEvent.click(await screen.findByRole('button',{name:button}))
+    expect(await screen.findByRole('alert')).toHaveTextContent('The stored file is no longer available')
+    expect(fetchMock.mock.calls.some(([input])=>String(input).endsWith(path))).toBe(true)
+  })
 })

@@ -7,8 +7,8 @@ The target layout is Neon PostgreSQL, a Docker web service on Render, and the Vi
 ## 1. Create the Neon database
 
 1. Create a Neon project and a database/role for this demo.
-2. In Neon Console choose **Connect**, select the database and role, and copy the connection string. Neon supplies a PostgreSQL URI with TLS parameters such as `sslmode=require` (and may include `channel_binding=require`). Store the complete URI as `DATABASE_URL` in Render. The app converts Neon’s standard `postgresql://` scheme to SQLAlchemy’s installed `psycopg` 3 driver while preserving query parameters.
-3. Use the pooled connection string Neon provides by default unless direct connections are specifically needed. Never commit the URL or put it in a frontend variable.
+2. In Neon Console choose **Connect** and select the **direct** connection option, not the pooled option. Use the `postgresql://` URI with `sslmode=require` (and any Neon TLS parameters); the app converts it to the installed `psycopg` 3 driver. The application uses PostgreSQL advisory locks and Alembic, so a hostname containing `-pooler` logs a startup WARNING and must be replaced by the direct hostname.
+3. Never commit a connection URL or put it in a frontend variable. The direct URL is required for the backend runtime and laptop seeding.
 
 Neon describes the connection URI and its TLS parameters in [Connect from any application](https://neon.com/docs/connect/connect-from-any-app).
 
@@ -17,12 +17,12 @@ Neon describes the connection URI and its TLS parameters in [Connect from any ap
 1. Create a **Web Service** from this repository and select **Docker**.
 2. Set the Docker build context to the repository root and Dockerfile Path to `./backend/Dockerfile`. The root `.dockerignore` excludes local environments, secrets, caches, and storage from the image build context.
 3. Set the health check path to `/api/v1/health`.
-4. A Render Free web service has no persistent disk; uploaded files on its ephemeral filesystem are lost on restart, redeploy, or spin-down. For persistent uploads, use a paid service with a disk mounted at `/var/data` and set `STORAGE_ROOT=/var/data`. The app validates that this directory is writable before applying migrations. Uploaded files are kept outside the `/app` web/code root and are served only through authorized API endpoints. See [Render free service limitations](https://render.com/docs/free) and [persistent disk limitations](https://render.com/docs/disks#disk-limitations-and-considerations).
+4. A Render Free web service has no persistent disk; uploaded files on its ephemeral filesystem are lost on restart, redeploy, or spin-down. For persistent uploads, use a paid service with a disk mounted at `/var/data` and set `STORAGE_ROOT=/var/data`. The app validates that this directory is writable before applying migrations. Uploaded files are kept outside the `/app` web/code root and are served only through authorized API endpoints. See [Render free service limitations](https://render.com/docs/free) and [persistent disk limitations](https://render.com/docs/disks#disk-limitations-and-considerations). Free services spin down after 15 minutes idle and take about one minute to spin back up; see [Render Free service startup behavior](https://render.com/docs/free#spinning-down-on-idle).
 5. Set the backend environment variables in the table below. Set `FRONTEND_ORIGIN` to the exact Vercel origin (scheme and host only, no path or trailing slash), for example `https://your-demo.vercel.app`.
 6. Deploy. The non-root container validates production configuration and storage access, runs `python -m alembic upgrade head`, and only then starts Uvicorn on Render’s `$PORT`.
 7. Check `https://<render-service>.onrender.com/api/v1/health` and confirm it returns HTTP 200. `/api/v1/docs`, `/api/v1/redoc`, and `/api/v1/openapi.json` are disabled in production.
 
-Render’s [Docker instructions](https://render.com/docs/docker) cover selecting Docker and setting a Dockerfile path; its [health check guide](https://render.com/docs/health-checks) describes configuring an HTTP path. A Render persistent disk preserves data only under its mount path. It is attached to one service instance, prevents scaling that service to multiple instances, is unavailable to builds, pre-deploy commands, and one-off jobs, and disables zero-downtime deploys. Plan for a brief interruption during deploys and keep a separate backup of important uploaded demo files. See [Render persistent disk limitations](https://render.com/docs/disks#disk-limitations-and-considerations).
+Render’s [Docker instructions](https://render.com/docs/docker) cover selecting Docker and setting a Dockerfile path; its [health check guide](https://render.com/docs/health-checks) describes configuring an HTTP path. A Render persistent disk preserves data only under its mount path. It is attached to one service instance, prevents scaling that service to multiple instances, is unavailable to builds, pre-deploy commands, and one-off jobs, and disables zero-downtime deploys. Plan for a brief interruption during deploys and keep a separate backup of important uploaded demo files. See [Render persistent disk limitations](https://render.com/docs/disks#disk-limitations-and-considerations). Free services spin down after 15 minutes idle and take about one minute to spin back up; see [Render Free service startup behavior](https://render.com/docs/free#spinning-down-on-idle).
 
 ## 3. Seed the synthetic demo once
 
@@ -36,7 +36,7 @@ Seeding is never automatic. After the backend has deployed and its migrations ha
    python -m app.db.seed_demo
    ```
 
-The command requires `APP_ENV=production`, a valid `DATABASE_URL`, a non-placeholder `JWT_SECRET_KEY`, and `SEED_DEMO_PASSWORD`. It creates only explicitly synthetic fixture rows and sets that password only for users marked `is_synthetic`. The seed is deterministic and idempotent; it creates metadata-only document fixture rows and does not write uploaded files. Do not run this against any database containing non-demo data.
+The command requires `APP_ENV=development` or `production`, a valid `DATABASE_URL`, a non-placeholder `JWT_SECRET_KEY`, and `SEED_DEMO_PASSWORD`. It prints only the database host and requires typing `SEED` before opening a database connection or writing. It creates only synthetic fixture rows and sets passwords only for users marked `is_synthetic`. The seed is deterministic and idempotent; it creates metadata-only document fixture rows and does not write uploaded files. Do not run this against any database containing non-demo data.
 
 To rotate the shared demo-user password, set a new `SEED_DEMO_PASSWORD` temporarily in the running service’s shell and run:
 
@@ -45,6 +45,25 @@ python -m app.db.set_demo_passwords
 ```
 
 This updates passwords for synthetic users only. Clear the shell variable when done. A shared demo password is intended only for a restricted demonstration; distribute it only to demo participants and rotate it after the demo.
+
+## Seed or rotate demo data from your laptop
+
+Render Free has no Shell access. From PowerShell, run the following in the backend directory. These assignments affect only the current terminal session; do not put the Neon URL or `SEED_DEMO_PASSWORD` in `.env` or Git. Paste the Neon **direct** connection string when prompted. The command prints the target host and asks for an explicit confirmation word before any database connection or write.
+
+```powershell
+Push-Location .\backend
+$env:DATABASE_URL = Read-Host 'Paste Neon DIRECT connection string'
+$env:APP_ENV = 'development'
+$env:SEED_DEMO_PASSWORD = Read-Host 'Enter synthetic demo password (12+ characters)'
+.\.venv\Scripts\python.exe -m app.db.seed_demo
+# Type SEED when prompted after checking the printed host.
+Remove-Item Env:DATABASE_URL, Env:SEED_DEMO_PASSWORD, Env:APP_ENV
+Pop-Location
+```
+
+For password rotation, repeat the session variable assignments and run `python -m app.db.set_demo_passwords` from `backend`; inspect the printed host and type `ROTATE`. Remove `Env:DATABASE_URL`, `Env:SEED_DEMO_PASSWORD`, and `Env:APP_ENV` from that terminal when finished. `SEED_DEMO_PASSWORD` is only for these demo scripts. `SEED_DEV_PASSWORD` is only for `python -m app.db.set_dev_passwords` against the local development database. The general `.env.example` keeps the local-only variable; do not add the demo password to any `.env` file.
+
+The config loader uses `load_dotenv` without overriding existing process environment variables, so the PowerShell `DATABASE_URL` wins over `backend/.env`. PostgreSQL `postgresql://` Neon URLs are normalized to `postgresql+psycopg://` while retaining `sslmode=require`.
 
 ## 4. Deploy the frontend to Vercel
 
@@ -109,6 +128,19 @@ Production startup fails if the signing secret is missing, short, or a known pla
 - Migrations run on each container start, before Uvicorn serves requests. Seed commands are separate and explicit.
 - The Vercel API rewrite disables caching so authenticated API responses are not cached at the proxy.
 - The frontend package does not currently include ESLint or an ESLint configuration, so there is no lint script. This is a known tooling gap; no lint script was added.
+
+## Render Free operation and pre-demo warm-up
+
+Free web services spin down after 15 minutes without inbound traffic. A cold start takes about one minute while the service starts. The in-process scheduler is disabled by default (`SCHEDULER_ENABLED=false`); a process-local scheduler cannot be relied on across sleep and cold starts. Use the monitoring **Run now** action when permitted, or run `python -m app.services.monitoring run` from `backend` for manual evaluation.
+
+Before a demo, use this warm-up checklist:
+
+- Open the Vercel app and wait for it to load.
+- Request the backend health path through the Vercel `/api` rewrite and allow up to about a minute for a cold start.
+- Sign in with the synthetic demo account and verify the dashboard and FDR list load.
+- Open a synthetic FDR and verify its document panel and reports.
+- If monitoring results are needed, trigger **Run now** and confirm the run completes before presenting.
+- Avoid leaving the demo idle for 15 minutes immediately before presenting; repeat the health request if it has idled.
 
 ## Rollback
 

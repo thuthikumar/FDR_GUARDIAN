@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime
 from pathlib import Path
 from urllib.parse import quote
 from uuid import UUID
@@ -27,6 +28,14 @@ from app.services.institution_access import get_accessible_fdr, scope_fdr_query
 
 router = APIRouter(tags=["documents"])
 CONTENT_TYPES = {".pdf": "application/pdf", ".png": "image/png", ".jpg": "image/jpeg"}
+MISSING_FILE_DETAIL = "The stored file is no longer available"
+
+
+def _require_stored_file(document: Document, session: Session, storage: LocalPrivateStorage) -> None:
+    if storage.exists(document.private_storage_key):
+        return
+    _mark_file_missing(document, session)
+    raise HTTPException(status_code=410, detail=MISSING_FILE_DETAIL)
 
 
 def _accessible_document(session: Session, user: User, document_id: UUID):
@@ -123,8 +132,7 @@ def download_document(document_id: UUID, request: Request,
     actor: User = Depends(require_permission(Permission.DOCUMENT_READ)), session: Session = Depends(get_session)):
     document, _record, _uploader = _accessible_document(session, actor, document_id)
     storage = LocalPrivateStorage()
-    if not storage.exists(document.private_storage_key):
-        raise HTTPException(status_code=404, detail="Document file not found")
+    _require_stored_file(document, session, storage)
     write_audit_event(session, request, action="document_downloaded", entity_type="document", entity_id=document.id,
         actor_id=actor.id, change_summary={"document_type": document.document_type,
             "file_size": document.file_size, "sha256": document.checksum, "status": document.processing_status})
@@ -132,7 +140,8 @@ def download_document(document_id: UUID, request: Request,
     try:
         source = storage.open(document.private_storage_key)
     except (OSError, ValueError):
-        raise HTTPException(status_code=404, detail="Document file not found") from None
+        _mark_file_missing(document, session)
+        raise HTTPException(status_code=410, detail=MISSING_FILE_DETAIL) from None
 
     def stream_file():
         with source:
@@ -151,6 +160,13 @@ def _stored_value(record: FDRRecord, field: str) -> str | None:
     if value is None:
         return None
     return value.isoformat() if hasattr(value, "isoformat") else str(value)
+
+
+def _mark_file_missing(document: Document, session: Session) -> None:
+    document.processing_status = "failed"
+    document.processing_error_code = "stored_file_missing"
+    document.processed_at = datetime.now().astimezone()
+    session.commit()
 
 
 def _compare(field: str, extracted: str | None, stored: str | None) -> str:
@@ -175,6 +191,7 @@ def _compare(field: str, extracted: str | None, stored: str | None) -> str:
 def get_extraction(document_id: UUID, actor: User = Depends(require_permission(Permission.DOCUMENT_READ)),
                    session: Session = Depends(get_session)) -> DocumentExtractionResponse:
     document, record, _uploader = _accessible_document(session, actor, document_id)
+    _require_stored_file(document, session, LocalPrivateStorage())
     rows = {row.field_name: row for row in session.scalars(select(ExtractedField).where(
         ExtractedField.document_id == document.id))}
     fields = []
@@ -193,6 +210,7 @@ def get_extraction(document_id: UUID, actor: User = Depends(require_permission(P
 def reprocess_document(document_id: UUID, request: Request,
     actor: User = Depends(require_permission(Permission.DOCUMENT_REPROCESS)), session: Session = Depends(get_session)) -> DocumentMetadata:
     document, _record, uploader = _accessible_document(session, actor, document_id)
+    _require_stored_file(document, session, LocalPrivateStorage())
     reviewed = session.scalar(select(ExtractedField.id).where(ExtractedField.document_id == document.id,
         ExtractedField.reviewer_confirmed_value.is_not(None)).limit(1))
     if reviewed:

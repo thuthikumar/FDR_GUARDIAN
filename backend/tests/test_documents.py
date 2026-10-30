@@ -236,6 +236,27 @@ def test_download_headers_audit_and_no_delete_routes(api_client, db_session, mon
     assert not any("storage" in str(value).lower() for value in metadata.values())
 
 
+@pytest.mark.parametrize("operation", ["download", "extraction", "reprocess"])
+def test_missing_private_file_returns_safe_gone_and_marks_document(api_client, db_session, monkeypatch, tmp_path, operation):
+    monkeypatch.setenv("STORAGE_ROOT", str(tmp_path / "private"))
+    _, user, record = add_context(db_session, UserRole.VERIFICATION_OFFICER.value)
+    document = add_document(db_session, record, user)
+    LocalPrivateStorage().resolve(document.private_storage_key).unlink()
+    monkeypatch.setattr("app.api.documents.enqueue_document", lambda _id: None)
+    if operation == "download":
+        response = api_client.get(f"/api/v1/documents/{document.id}/download", headers=auth(user))
+    elif operation == "extraction":
+        response = api_client.get(f"/api/v1/documents/{document.id}/extraction", headers=auth(user))
+    else:
+        response = api_client.post(f"/api/v1/documents/{document.id}/reprocess", headers=auth(user))
+    assert response.status_code == 410
+    assert response.json() == {"detail": "The stored file is no longer available"}
+    assert str(tmp_path) not in response.text
+    db_session.refresh(document)
+    assert document.processing_status == "failed"
+    assert document.processing_error_code == "stored_file_missing"
+
+
 def test_extraction_response_has_all_fields_and_neutral_comparisons(api_client,db_session):
     _, user, record=add_context(db_session,UserRole.READ_ONLY_AUDITOR.value)
     document=add_document(db_session,record,user)

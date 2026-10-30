@@ -14,8 +14,8 @@ export const BRANDING = {
   governmentPills: ['Ministry of Education', 'Government of India', 'Digital India', 'National Portal of India', 'AICTE'] as const,
   publicPills: ['FDR Guardian', 'Synthetic demo'] as const,
   policyCaution: SHOW_GOV_BRANDING
-    ? 'Maturity thresholds are demo defaults, not verified AICTE policy. A past stored maturity date means overdue-date review, not that an instrument is invalid.'
-    : 'Maturity thresholds are demo defaults, not verified policy. A past stored maturity date means overdue-date review, not that an instrument is invalid.',
+    ? 'Maturity thresholds are demo defaults, not verified AICTE policy. Review past stored maturity dates as overdue; this does not mean an instrument is invalid.'
+    : 'Maturity thresholds are demo defaults, not verified policy. Review past stored maturity dates as overdue; this does not mean an instrument is invalid.',
   footerGroups: [
     { title: 'Workflow', links: [{ label: 'Dashboard', href: '/dashboard' }, { label: 'Institutions', href: '/institutions' }, { label: 'FDR Registry', href: '/fdrs' }] },
     { title: 'Monitoring', links: [{ label: 'Reports', href: '/reports' }, { label: 'Alert Centre', href: '/alerts' }] },
