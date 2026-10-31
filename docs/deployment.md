@@ -76,6 +76,8 @@ The config loader uses `load_dotenv` without overriding existing process environ
 
 Vercel documents [external rewrites](https://vercel.com/docs/routing/rewrites) and the [Vite project settings](https://vercel.com/docs/frameworks/frontend/vite). The static external rewrite destination lives in `frontend/vercel.json`; it is not read from a Vite variable.
 
+The browser-tab icon follows `VITE_SHOW_GOV_BRANDING` and uses `frontend/public/branding/gov-logo.png` only when the file is present locally; the Emblem of India must only be used with proper authorization.
+
 ## Environment variables
 
 | Variable | Set on | Required/value | Purpose |
