@@ -101,7 +101,9 @@ button { color: inherit; }
 .brand-shield { display: grid; width: 48px; height: 52px; place-items: center; border: 2px solid var(--navy2); border-radius: 15px 15px 19px 19px; color: var(--navy2); }
 .brand-shield svg { width: 28px; height: 28px; }
 .header-brand-copy { display: grid; gap: .05rem; }
+.header-brand-title { display: flex; align-items: center; gap: .55rem; }
 .header-brand-copy strong { color: var(--navy2); font-size: 23px; font-weight: 800; letter-spacing: -.35px; line-height: 1.15; }
+.header-optional-logo { display: block; width: auto; max-width: 76px; height: auto; max-height: 38px; object-fit: contain; }
 .header-brand-copy small { color: var(--navy); font-size: 11px; font-weight: 700; line-height: 1.25; }
 .header-brand-copy .header-gov-meta { color: var(--mute); font-size: 9px; font-weight: 600; }
 .global-search { display: flex; align-items: center; flex: 1 1 300px; max-width: 570px; min-width: 180px; overflow: hidden; border: 1px solid #aab4c8; border-radius: 7px; background: var(--card); color: var(--mute); }
@@ -253,6 +255,7 @@ button { color: inherit; }
   .brand-emblem { height: 46px; }
   .brand-shield { width: 40px; height: 44px; }
   .header-brand-copy strong { font-size: 19px; }
+  .header-optional-logo { max-width: 54px; max-height: 30px; }
   .header-brand-copy small { max-width: 220px; font-size: 9px; }
   .header-brand-copy .header-gov-meta { font-size: 8px; }
   .user-copy { display: none; }

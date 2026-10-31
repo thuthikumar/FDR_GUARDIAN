@@ -74,6 +74,8 @@ The config loader uses `load_dotenv` without overriding existing process environ
 5. Leave `VITE_SHOW_GOV_BRANDING` unset in production and for any public link. Its unset mode is neutral; only the case-insensitive string `true` enables government branding.
 6. Set the Render `FRONTEND_ORIGIN` to the exact production Vercel origin. If using a Vercel preview, update the origin deliberately before testing preview sign-in; CORS allows exactly one configured origin.
 
+The browser-tab icon is defined by `frontend/public/favicon.svg`, with PNG fallbacks in the same `public` directory. To add an optional organization logo in government-branding mode, place your authorized image at `frontend/public/branding/gov-logo.png`; the header displays it only when the file is available. Use of the Emblem of India requires proper authorization. Do not add an official emblem or logo without that authorization.
+
 Vercel documents [external rewrites](https://vercel.com/docs/routing/rewrites) and the [Vite project settings](https://vercel.com/docs/frameworks/frontend/vite). The static external rewrite destination lives in `frontend/vercel.json`; it is not read from a Vite variable.
 
 ## Environment variables

@@ -1,4 +1,5 @@
 import { Shield } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { BRANDING, SHOW_GOV_BRANDING } from '../config/branding'
 
 type BrandingModeProps = { showGovBranding?: boolean }
@@ -13,11 +14,34 @@ export function HeaderBrand({ showGovBranding = SHOW_GOV_BRANDING }: BrandingMod
   return <span className="header-brand-lockup">
     <BrandMark showGovBranding={showGovBranding} />
     <span className="header-brand-copy">
-      <strong>{BRANDING.productName}</strong>
+      <span className="header-brand-title">
+        <strong>{BRANDING.productName}</strong>
+        {showGovBranding && <OptionalGovLogo />}
+      </span>
       <small>{BRANDING.subtitle}</small>
       {showGovBranding && <small className="header-gov-meta">{BRANDING.governmentIdentity.join(' / ')}</small>}
     </span>
   </span>
+}
+
+function OptionalGovLogo() {
+  const [available, setAvailable] = useState(false)
+
+  useEffect(() => {
+    let mounted = true
+    void fetch('/branding/gov-logo.png', { method: 'HEAD' })
+      .then((response) => {
+        const contentType = response.headers.get('content-type')?.toLowerCase() ?? ''
+        if (mounted && response.ok && contentType.startsWith('image/')) setAvailable(true)
+      })
+      .catch(() => undefined)
+
+    return () => { mounted = false }
+  }, [])
+
+  return available
+    ? <img className="header-optional-logo" src="/branding/gov-logo.png" alt="Organization logo" />
+    : null
 }
 
 export function GovernmentIdentity({ showGovBranding = SHOW_GOV_BRANDING, compact = false }: BrandingModeProps & { compact?: boolean }) {
