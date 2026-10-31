@@ -96,8 +96,7 @@ button { color: inherit; }
 .header-primary { display: flex; align-items: center; gap: 1.5rem; max-width: 1320px; min-height: 88px; margin: 0 auto; padding: .65rem 1.5rem; }
 .brand-link { flex: none; }
 .header-brand-lockup { display: inline-flex; align-items: center; gap: .75rem; }
-.brand-emblem { display: block; width: auto; height: 58px; object-fit: contain; }
-.brand-emblem-compact { height: 44px; }
+.brand-mark-compact { height: 44px; }
 .brand-shield { display: grid; width: 48px; height: 52px; place-items: center; border: 2px solid var(--navy2); border-radius: 15px 15px 19px 19px; color: var(--navy2); }
 .brand-shield svg { width: 28px; height: 28px; }
 .header-brand-copy { display: grid; gap: .05rem; }
@@ -204,7 +203,6 @@ button { color: inherit; }
 .government-identity-compact { color: #fff; }
 .government-identity-compact strong { color: #fff; }
 .government-identity-compact small { color: #e0e9ff; }
-.government-identity-compact .brand-emblem { filter: grayscale(1) brightness(0) invert(1); }
 .government-identity-compact .brand-shield { border-color: #fff; color: #fff; }
 .footer-disclaimer { margin: 0; border-top: 1px solid rgb(255 255 255 / 24%); padding: 1rem 0 0; color: #e1e9ff; font-size: .75rem; line-height: 1.7; text-align: center; }
 
@@ -221,7 +219,6 @@ button { color: inherit; }
 .login-intro .government-identity { margin-bottom: 2.1rem; color: #fff; }
 .login-intro .government-identity strong { color: #fff; }
 .login-intro .government-identity small { color: #e0e9ff; }
-.login-intro .brand-emblem { filter: grayscale(1) brightness(0) invert(1); }
 .login-intro .brand-shield { border-color: #fff; color: #fff; }
 .login-intro h2 { max-width: 25rem; margin: 0 0 .75rem; color: #fff; font-size: 1.65rem; font-weight: 700; line-height: 1.3; }
 .login-intro-description { max-width: 29rem; margin: 0; color: #e0e9ff; line-height: 1.7; }
@@ -252,7 +249,6 @@ button { color: inherit; }
 }
 @media (max-width: 760px) {
   .header-primary { min-height: 0; }
-  .brand-emblem { height: 46px; }
   .brand-shield { width: 40px; height: 44px; }
   .header-brand-copy strong { font-size: 19px; }
   .header-optional-logo { max-width: 54px; max-height: 30px; }

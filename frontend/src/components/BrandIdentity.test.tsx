@@ -5,13 +5,15 @@ import { GovernmentIdentity, HeaderBrand } from './BrandIdentity'
 afterEach(() => vi.unstubAllGlobals())
 
 describe('branding modes', () => {
-  it('renders the government identity and emblem when enabled', () => {
+  it('keeps the FDR Guardian shield alongside government identity when enabled', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, headers: { get: () => null } }))
     render(<><HeaderBrand showGovBranding /><GovernmentIdentity showGovBranding /></>)
     expect(screen.getAllByText('FDR Guardian').length).toBeGreaterThan(0)
     expect(screen.getByText('Government of India')).toBeInTheDocument()
     expect(screen.getByText('Ministry of Education · AICTE')).toBeInTheDocument()
-    expect(screen.getAllByAltText('State Emblem of India')).toHaveLength(2)
+    expect(screen.getAllByLabelText('FDR Guardian shield')).toHaveLength(2)
+    expect(screen.queryByAltText('State Emblem of India')).not.toBeInTheDocument()
+    expect(screen.queryByAltText('Organization logo')).not.toBeInTheDocument()
   })
 
   it('renders neutral identity without government labels when disabled', () => {
@@ -34,6 +36,8 @@ describe('branding modes', () => {
 
     const logo = await screen.findByAltText('Organization logo')
     expect(logo).toHaveAttribute('src', '/branding/gov-logo.png')
+    expect(screen.getAllByAltText('Organization logo')).toHaveLength(1)
+    expect(screen.getByLabelText('FDR Guardian shield')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/branding/gov-logo.png', { method: 'HEAD' })
   })
 

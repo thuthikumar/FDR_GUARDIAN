@@ -5,7 +5,6 @@ export const SHOW_GOV_BRANDING = brandingSetting?.toLowerCase() === 'true'
 export const BRANDING = {
   productName: 'FDR Guardian',
   headerLabel: 'FDR Guardian dashboard',
-  emblemAlt: 'State Emblem of India',
   neutralMarkLabel: 'FDR Guardian shield',
   subtitle: 'Security Deposit and FDR Lifecycle Management',
   footerDisclaimer: 'Prototype for Smart India Hackathon 2026 (SIH26265). Demo with synthetic data only. Not an official government website and not connected to AICTE or any government system.',
